@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Konyha">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FBFAF7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1B1A18" media="(prefers-color-scheme: dark)">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="apple-touch-icon" href="ikon-ipad.png">
+<title>Konyha</title>
+<style>
+  /* Színek: világos alapértelmezés, sötét a készülék beállítása szerint. */
+  :root {
+    color-scheme: light dark;
+    --ground: #F4F2EE;
+    --bar: #FBFAF7;
+    --bar-line: #E2DED7;
+    --rail: #E9E6E0;
+    --rail-btn: #F7F5F1;
+    --tab: #EFECE6;
+    --surface: #FFFFFF;
+    --field: #FFFFFF;
+    --field-line: #CFCAC1;
+    --ink: #1C1917;
+    --ink-2: #2B2824;
+    --muted: #5F5A52;
+    --muted-2: #6B665E;
+    --idle: #8A847A;
+    --line: #DEDAD3;
+    --line-soft: #E4E0D9;
+    --dash: #A39C90;
+    --accent: #1E5A46;
+    --accent-fill: #1E5A46;
+    --on-accent: #FFFFFF;
+    --sel-bg: #1C1917;
+    --sel-fg: #FFFFFF;
+    --del-bg: #2B2824;
+    --del-fg: #FFFFFF;
+    --warn-bg: #FBEEDD;
+    --warn-fg: #7A3A0A;
+    --ok-bg: #E7EFEA;
+    --ok-fg: #1E5A46;
+    --toast-bg: #1C1917;
+    --toast-fg: #FFFFFF;
+    --scrim: rgba(28, 25, 23, 0.45);
+    --shadow: rgba(28, 25, 23, 0.25);
+    --alarm: #B42318;
+    --alarm-dark: #7A1A12;
+    --error-text: #B42318;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #151413;
+      --bar: #1B1A18;
+      --bar-line: #2E2C29;
+      --rail: #1E1D1B;
+      --rail-btn: #2A2825;
+      --tab: #2A2825;
+      --surface: #232120;
+      --field: #1B1A18;
+      --field-line: #4A4640;
+      --ink: #F2EFEA;
+      --ink-2: #E4E0D9;
+      --muted: #ABA49A;
+      --muted-2: #9D968C;
+      --idle: #8F887E;
+      --line: #3A3733;
+      --line-soft: #34312D;
+      --dash: #7A7368;
+      --accent: #6CC9A3;
+      --accent-fill: #2B7A5C;
+      --on-accent: #FFFFFF;
+      --sel-bg: #F2EFEA;
+      --sel-fg: #151413;
+      --del-bg: #E4E0D9;
+      --del-fg: #151413;
+      --warn-bg: #3A2A1C;
+      --warn-fg: #F2C9A0;
+      --ok-bg: #1D3329;
+      --ok-fg: #8FD9B6;
+      --toast-bg: #F2EFEA;
+      --toast-fg: #151413;
+      --scrim: rgba(0, 0, 0, 0.6);
+      --shadow: rgba(0, 0, 0, 0.5);
+      --error-text: #F28B80;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  body { overflow: hidden; }
+  button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  button, .tile { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  svg { display: block; }
+
+  #app { height: 100vh; display: grid; grid-template-rows: 88px minmax(0, 1fr); }
+
+  /* Felső sáv */
+  .topbar {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; grid-gap: 16px;
+    padding: 0 24px; background: var(--bar); border-bottom: 1px solid var(--bar-line);
+  }
+  .tabs { display: grid; grid-auto-flow: column; justify-content: start; grid-gap: 10px; }
+  .tab {
+    height: 60px; padding: 0 22px 0 18px; border: 0; border-radius: 14px;
+    background: var(--tab); color: var(--ink-2);
+    display: grid; grid-auto-flow: column; align-items: center; grid-gap: 10px;
+    font-size: 20px; font-weight: 600;
+  }
+  .tab.is-active { background: var(--sel-bg); color: var(--sel-fg); }
+  .tab svg { width: 24px; height: 24px; }
+  .chip {
+    height: 52px; padding: 0 20px 0 16px; border: 0; border-radius: 26px;
+    background: var(--accent-fill); color: var(--on-accent);
+    display: grid; grid-auto-flow: column; align-items: center; grid-gap: 8px;
+    font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums;
+  }
+  .chip svg { width: 22px; height: 22px; }
+  .chip.is-alarm { color: #FFFFFF; animation: flash 1.2s steps(1) infinite; }
+  @keyframes flash { 0% { background: var(--alarm); } 50% { background: var(--alarm-dark); } }
+
+  .view { min-height: 0; }
+
+  /* Oldalsáv + tartalom */
+  .split { display: grid; grid-template-columns: 280px minmax(0, 1fr); }
+  .rail {
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 24px 20px; background: var(--rail);
+    display: grid; grid-auto-rows: minmax(64px, auto); grid-gap: 8px; align-content: start;
+  }
+  .rail-btn {
+    width: 100%; padding: 9px 14px 9px 18px; border: 0; border-radius: 14px; line-height: 1.2;
+    background: var(--rail-btn); color: var(--ink-2);
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; grid-gap: 10px;
+    text-align: left; font-size: 20px; font-weight: 600; overflow-wrap: break-word; word-wrap: break-word;
+  }
+  .rail-btn > span:first-child { min-width: 0; }
+  .rail-btn.is-active { background: var(--sel-bg); color: var(--sel-fg); }
+  .miss-badge {
+    min-width: 30px; height: 30px; padding: 0 8px; border-radius: 15px; border: 2px dashed var(--dash); color: var(--muted);
+    display: grid; align-items: center; justify-items: center; font-size: 15px; font-weight: 700;
+  }
+  .rail-btn.is-active .miss-badge { border-color: var(--sel-fg); color: var(--sel-fg); }
+  .pane { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 32px 44px 48px; }
+  .pane-head {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; grid-gap: 16px;
+    min-height: 52px; margin-bottom: 24px;
+  }
+  .title { margin: 0; font-size: 36px; line-height: 1.1; font-weight: 700; letter-spacing: -0.01em; }
+  .hint { margin: 4px 0 0; font-size: 17px; color: var(--muted); }
+
+  .btn-primary {
+    height: 52px; padding: 0 30px; border: 0; border-radius: 14px;
+    background: var(--accent-fill); color: var(--on-accent); font-size: 20px; font-weight: 700;
+  }
+  .btn-secondary {
+    height: 56px; padding: 0 24px; border: 2px solid var(--line); border-radius: 14px;
+    background: var(--surface); color: var(--ink); font-size: 19px; font-weight: 600;
+  }
+  .btn-primary:disabled, .btn-secondary:disabled { opacity: 0.6; cursor: default; }
+
+  /* Kamra csempék */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); grid-gap: 16px; }
+  .tile {
+    position: relative; height: 112px; padding: 12px 12px 14px 16px; border-radius: 16px;
+    display: grid; grid-template-rows: 28px minmax(0, 1fr);
+    text-align: left; font-size: 21px; line-height: 1.2; font-weight: 600; color: var(--ink);
+  }
+  .tile-label { align-self: end; word-wrap: break-word; overflow-wrap: break-word; }
+  .tile.is-have { border: 2px solid var(--line-soft); background: var(--surface); }
+  .tile.is-missing { border: 2px dashed var(--dash); background: transparent; }
+  .tick, .ring { justify-self: end; width: 28px; height: 28px; border-radius: 14px; }
+  .tick { background: var(--accent-fill); color: var(--on-accent); display: grid; align-items: center; justify-items: center; }
+  .tick svg { width: 18px; height: 18px; }
+  .ring { border: 2px solid var(--dash); }
+  .tile.is-edit { grid-template-rows: minmax(0, 1fr); }
+  .del {
+    position: absolute; top: -16px; left: -16px; width: 44px; height: 44px; padding: 0;
+    border: 0; background: transparent; display: grid; align-items: center; justify-items: center;
+  }
+  .del span {
+    width: 32px; height: 32px; border-radius: 16px; border: 3px solid var(--ground); background: var(--del-bg); color: var(--del-fg);
+    display: grid; align-items: center; justify-items: center;
+  }
+  .del svg { width: 16px; height: 16px; }
+  .add-tile {
+    height: 112px; border: 2px dashed var(--accent); border-radius: 16px; background: transparent; color: var(--accent);
+    display: grid; align-content: center; justify-items: center; grid-gap: 6px; font-size: 19px; font-weight: 600;
+  }
+  .add-tile svg { width: 30px; height: 30px; }
+  .empty { grid-column: 1 / -1; display: grid; justify-items: start; grid-gap: 16px; }
+  .empty p { margin: 0; font-size: 20px; color: var(--muted); }
+  .btn-dashed {
+    height: 56px; padding: 0 24px 0 18px; border: 2px dashed var(--accent); border-radius: 14px;
+    background: transparent; color: var(--accent);
+    display: grid; grid-auto-flow: column; align-items: center; grid-gap: 8px; font-size: 19px; font-weight: 600;
+  }
+  .btn-dashed svg { width: 22px; height: 22px; }
+
+  /* Receptek */
+  .placeholder { margin: 120px 0 0; text-align: center; font-size: 24px; font-weight: 600; color: var(--muted); }
+  .recipe-body { display: grid; grid-template-columns: 432px minmax(0, 1fr); grid-gap: 40px; margin-top: 28px; align-items: start; }
+  .recipe-body.no-steps { grid-template-columns: minmax(0, 560px); }
+  .eyebrow { margin: 0 0 8px; font-size: 15px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .notice {
+    margin-top: 14px; padding: 10px 18px 10px 14px; border-radius: 14px; justify-self: start;
+    display: inline-grid; grid-template-columns: 22px minmax(0, 1fr); align-items: center; grid-gap: 10px;
+    font-size: 18px; line-height: 1.35;
+  }
+  .notice svg { width: 22px; height: 22px; }
+  .notice.is-missing { background: var(--warn-bg); color: var(--warn-fg); }
+  .notice.is-ok { background: var(--ok-bg); color: var(--ok-fg); font-weight: 600; }
+  .ing-hint { margin: -2px 0 10px; font-size: 15px; color: var(--muted); }
+  .ings { display: grid; grid-gap: 4px; }
+  .ing {
+    width: 100%; min-height: 52px; padding: 6px 12px; border: 2px solid transparent; border-radius: 12px; background: transparent;
+    display: grid; grid-template-columns: 26px 92px minmax(0, 1fr) auto; align-items: center; grid-gap: 12px;
+    text-align: left; font-size: 20px; line-height: 1.3; font-weight: 500; color: var(--ink);
+  }
+  .ing.is-missing { border: 2px dashed var(--dash); font-weight: 600; padding-right: 10px; }
+  .ing.is-unknown { color: var(--muted); }
+  .ing .tick, .ing .ring { justify-self: start; width: 26px; height: 26px; border-radius: 13px; }
+  .ing .tick svg { width: 16px; height: 16px; }
+  .ing .qty { font-size: 17px; font-weight: 500; line-height: 1.25; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ing .tag { padding: 4px 10px; border-radius: 10px; background: var(--warn-bg); color: var(--warn-fg); font-size: 14px; font-weight: 700; }
+  .ing .note { font-size: 14px; }
+  .ing .ing-note { font-size: 15px; font-weight: 400; color: var(--muted); }
+  .ing .dot { justify-self: center; width: 8px; height: 8px; border-radius: 4px; background: var(--dash); }
+  .steps ol { margin: 0; padding: 0; list-style: none; display: grid; grid-gap: 18px; }
+  .steps li { display: grid; grid-template-columns: 32px minmax(0, 1fr); grid-gap: 14px; align-items: start; }
+  .num {
+    width: 32px; height: 32px; border-radius: 16px; background: var(--rail);
+    display: grid; align-items: center; justify-items: center; font-size: 16px; font-weight: 700;
+  }
+  .step-text { font-size: 19px; line-height: 1.5; padding-top: 2px; }
+  .muted { color: var(--muted); font-size: 18px; margin: 0; }
+
+  /* Időzítő */
+  .timer { padding: 40px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 560px); grid-gap: 40px; }
+  .timer.is-alarm { grid-template-columns: minmax(0, 1fr); }
+  .clock-panel {
+    border: 2px solid var(--line); border-radius: 24px; background: var(--surface); padding: 40px;
+    display: grid; align-content: center; justify-items: center; grid-gap: 20px; text-align: center;
+  }
+  .clock-label { margin: 0; font-size: 22px; font-weight: 600; color: var(--muted); }
+  .clock { font-size: 124px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .clock.is-idle { color: var(--idle); }
+  .clock.is-long { font-size: 92px; }
+  .bar { width: 100%; max-width: 360px; height: 12px; border-radius: 6px; background: var(--tab); overflow: hidden; }
+  .bar div { height: 12px; border-radius: 6px; background: var(--accent-fill); }
+  .stop {
+    margin-top: 12px; height: 64px; padding: 0 30px 0 24px; border: 2px solid var(--line); border-radius: 16px;
+    background: var(--surface); color: var(--ink); display: grid; grid-auto-flow: column; align-items: center; grid-gap: 10px;
+    font-size: 21px; font-weight: 600;
+  }
+  .stop svg { width: 22px; height: 22px; }
+  .presets {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); grid-gap: 16px;
+  }
+  .preset {
+    position: relative; border: 2px solid var(--line); border-radius: 20px; background: var(--surface); color: var(--ink);
+    display: grid; align-content: center; justify-items: center; grid-gap: 4px;
+  }
+  .preset .v { font-size: 52px; line-height: 1; font-weight: 700; }
+  .preset .u { font-size: 20px; font-weight: 600; color: var(--muted); }
+  .preset.is-on { border-color: var(--accent-fill); background: var(--accent-fill); color: var(--on-accent); }
+  .preset.is-on .u { color: var(--on-accent); }
+  .preset .on-tick {
+    position: absolute; top: 12px; right: 12px; width: 28px; height: 28px; border-radius: 14px; background: #FFFFFF;
+    display: grid; align-items: center; justify-items: center;
+  }
+  .preset .on-tick svg { width: 18px; height: 18px; }
+  .alarm {
+    border-radius: 24px; color: #FFFFFF; padding: 48px; background: var(--alarm);
+    display: grid; align-content: center; justify-items: center; grid-gap: 22px; text-align: center;
+    animation: flash 1.2s steps(1) infinite;
+  }
+  .alarm svg { width: 96px; height: 96px; }
+  .alarm h1 { margin: 0; font-size: 76px; line-height: 1; font-weight: 800; letter-spacing: -0.02em; }
+  .alarm p { margin: 0; font-size: 28px; font-weight: 600; }
+  .alarm button {
+    margin-top: 16px; height: 88px; padding: 0 72px; border: 0; border-radius: 20px;
+    background: #FFFFFF; color: #B42318; font-size: 30px; font-weight: 700;
+  }
+
+  /* Új termék párbeszédablak */
+  .overlay {
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 10;
+    padding: 110px 16px 16px; background: var(--scrim);
+    display: grid; justify-content: center; align-content: start;
+  }
+  .dialog {
+    width: 540px; max-width: 100%; padding: 32px; border-radius: 24px; background: var(--surface); color: var(--ink);
+    display: grid; grid-gap: 20px; box-shadow: 0 24px 60px var(--shadow);
+  }
+  .dialog h2 { margin: 0; font-size: 28px; line-height: 1.2; }
+  .dialog .sub { margin: 4px 0 0; font-size: 18px; color: var(--muted); }
+  .field { display: grid; grid-gap: 8px; }
+  .field label { font-size: 16px; font-weight: 600; color: var(--muted); }
+  .field input {
+    height: 60px; padding: 0 18px; border: 2px solid var(--field-line); border-radius: 14px; background: var(--field);
+    color: var(--ink); font: inherit; font-size: 22px;
+  }
+  .field input:focus { outline: none; border-color: var(--accent); }
+  .err { margin: 0; font-size: 16px; font-weight: 600; color: var(--error-text); }
+  .actions { display: grid; grid-auto-flow: column; justify-content: end; grid-gap: 12px; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; z-index: 20; transform: translateX(-50%);
+    max-width: 640px; padding: 16px 22px; border-radius: 16px; background: var(--toast-bg); color: var(--toast-fg);
+    font-size: 18px; line-height: 1.4; box-shadow: 0 12px 32px var(--shadow);
+  }
+  .loading {
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 30; background: var(--ground);
+    display: grid; align-content: center; justify-items: center; grid-gap: 16px; text-align: center; padding: 24px;
+  }
+  .loading p { margin: 0; font-size: 22px; color: var(--muted); }
+
+  /* Kisebb (régebbi) iPadek */
+  @media (max-width: 1100px) {
+    .split { grid-template-columns: 256px minmax(0, 1fr); }
+    .rail { padding: 20px 16px; }
+    .rail-btn { padding: 8px 12px 8px 14px; font-size: 18px; }
+    .pane { padding: 28px 28px 40px; }
+    .timer { grid-template-columns: minmax(0, 1fr) minmax(0, 470px); padding: 32px; grid-gap: 28px; }
+    .clock { font-size: 96px; }
+    .clock.is-long { font-size: 72px; }
+    .preset .v { font-size: 44px; }
+    .recipe-body { grid-template-columns: 384px minmax(0, 1fr); grid-gap: 28px; }
+    .ing { grid-template-columns: 26px 80px minmax(0, 1fr) auto; grid-gap: 10px; font-size: 19px; }
+    .ing .qty { font-size: 16px; }
+    .step-text { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <nav class="tabs" aria-label="Nézetek">
+      <button type="button" class="tab" data-view="kamra">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 3h7v3h-7z"></path><path d="M7.5 6h9A2.5 2.5 0 0 1 19 8.5v10a2.5 2.5 0 0 1-2.5 2.5h-9A2.5 2.5 0 0 1 5 18.5v-10A2.5 2.5 0 0 1 7.5 6z"></path><path d="M5 12h14"></path></svg>
+        <span>Kamra</span>
+      </button>
+      <button type="button" class="tab" data-view="receptek">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5v-15z"></path><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19"></path><path d="M9 7.5h6"></path></svg>
+        <span>Receptek</span>
+      </button>
+      <button type="button" class="tab" data-view="idozito">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5"></circle><path d="M12 10v3.5l2.5 2"></path><path d="M9.5 3h5"></path></svg>
+        <span>Időzítő</span>
+      </button>
+    </nav>
+    <button type="button" id="chip" class="chip" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5"></circle><path d="M12 10v3.5l2.5 2"></path><path d="M9.5 3h5"></path></svg>
+      <span id="chipText"></span>
+    </button>
+  </header>
+
+  <section id="view-kamra" class="view split">
+    <nav id="cats" class="rail" aria-label="Kategóriák"></nav>
+    <main class="pane">
+      <div class="pane-head">
+        <div>
+          <h1 id="catTitle" class="title"></h1>
+          <p id="editHint" class="hint" hidden>Szerkesztés: a mínusz jellel törölsz, az „Új termék” csempével hozzáadsz.</p>
+        </div>
+        <button type="button" id="doneBtn" class="btn-primary" hidden>Kész</button>
+      </div>
+      <div id="items" class="grid"></div>
+    </main>
+  </section>
+
+  <section id="view-receptek" class="view split" hidden>
+    <nav id="recipeList" class="rail" aria-label="Receptek"></nav>
+    <main id="recipe" class="pane"></main>
+  </section>
+
+  <section id="view-idozito" class="view timer" hidden></section>
+</div>
+
+<div id="addDialog" class="overlay" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+    <div>
+      <h2 id="addTitle">Új termék</h2>
+      <p id="addCat" class="sub"></p>
+    </div>
+    <div class="field">
+      <label for="newName">Termék neve</label>
+      <input id="newName" type="text" maxlength="60" placeholder="pl. Zabtej" autocomplete="off" autocorrect="off" autocapitalize="sentences">
+      <p id="addError" class="err" hidden></p>
+    </div>
+    <div class="actions">
+      <button type="button" id="addCancel" class="btn-secondary">Mégse</button>
+      <button type="button" id="addConfirm" class="btn-primary">Hozzáadás</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" hidden></div>
+
+<div id="loading" class="loading">
+  <p id="loadingText">Betöltés…</p>
+  <button type="button" id="retryBtn" class="btn-secondary" hidden>Újrapróbálás</button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------------- Kapcsolat a táblázattal ----------------
+   * Az Apps Scripten belül a google.script.run hívja a szervert. Külön tárhelyen
+   * (pl. GitHub Pages) a link ?api=…&kulcs=… része mondja meg, melyik webalkalmazáshoz
+   * szóljon. Az app ezt meg is jegyzi, hogy a kezdőképernyőről indítva is meglegyen.
+   */
+  var CONN_STORE = 'konyhai_kapcsolat';
+  var API_TIMEOUT_MS = 30000;
+  var API_FUNCS = ['getState', 'setHave', 'addProduct', 'deleteProduct', 'finishShopping'];
+  var CONN = connection();
+  var KEY = CONN.key;
+
+  function inAppsScript() {
+    return !!(window.google && window.google.script && window.google.script.run);
+  }
+
+  function connection() {
+    if (inAppsScript()) return { key: '<?= key ?>', api: '', ok: true };
+    var q = {};
+    String(window.location.search || '').replace(/^\?/, '').split('&').forEach(function (part) {
+      if (!part) return;
+      var i = part.indexOf('=');
+      var k = i < 0 ? part : part.slice(0, i);
+      var v = i < 0 ? '' : part.slice(i + 1);
+      try { q[decodeURIComponent(k)] = decodeURIComponent(v.replace(/\+/g, ' ')); } catch (e) {}
+    });
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(CONN_STORE) || '{}') || {}; } catch (e) {}
+    var key = /^[A-Za-z0-9_-]{16,}$/.test(q.kulcs || '') ? q.kulcs : (saved.key || '');
+    var api = /^[A-Za-z0-9_-]{20,}$/.test(q.api || '') ? q.api : (saved.api || '');
+    if (key && api) {
+      try { localStorage.setItem(CONN_STORE, JSON.stringify({ key: key, api: api })); } catch (e) {}
+    }
+    return { key: key, api: api ? 'https://script.google.com/macros/s/' + api + '/exec' : '', ok: !!(key && api) };
+  }
+
+  /** Ugyanúgy hívható, mint a google.script.run: server().withSuccessHandler(…).withFailureHandler(…).fn(…) */
+  function server() {
+    return inAppsScript() ? window.google.script.run : apiRunner(null, null);
+  }
+
+  function apiRunner(onOk, onFail) {
+    var r = {
+      withSuccessHandler: function (f) { return apiRunner(f, onFail); },
+      withFailureHandler: function (f) { return apiRunner(onOk, f); }
+    };
+    API_FUNCS.forEach(function (name) {
+      r[name] = function () { apiPost(name, Array.prototype.slice.call(arguments), onOk, onFail); };
+    });
+    return r;
+  }
+
+  function apiPost(name, args, onOk, onFail) {
+    var done = false;
+    function finish(ok, value) {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      if (ok) { if (onOk) onOk(value); }
+      else if (onFail) onFail(new Error(value));
+    }
+    var timer = setTimeout(function () { finish(false, 'Nem jött válasz. Ellenőrizd a netkapcsolatot.'); }, API_TIMEOUT_MS);
+    if (!CONN.ok) {
+      finish(false, 'A link hiányos. Nyisd meg újra a táblázat Konyhai app › Hozzáférési linkek menüjéből.');
+      return;
+    }
+    window.fetch(CONN.api, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ fn: name, args: args }),
+      cache: 'no-store',
+      credentials: 'omit',
+      redirect: 'follow'
+    }).then(function (res) {
+      return res.text().then(function (text) {
+        var body = null;
+        try { body = JSON.parse(text); } catch (e) {}
+        if (!body) {
+          finish(false, res.ok
+            ? 'A webalkalmazás nem adatot küldött. Frissítsd a telepítést (Telepítések kezelése › Új verzió).'
+            : 'A szerver hibát jelzett (' + res.status + ').');
+        } else if (body.ok) {
+          finish(true, body.data);
+        } else {
+          finish(false, body.error || 'Ismeretlen hiba.');
+        }
+      });
+    }).catch(function () {
+      finish(false, 'Nincs kapcsolat a táblázattal. Ellenőrizd a netkapcsolatot.');
+    });
+  }
+  var POLL_MS = 30000;
+  var LONG_PRESS_MS = 550;
+  var TIMER_KEY = 'konyha_idozito';
+
+  var PRESETS = [
+    { key: '5', value: '5', unit: 'perc', min: 5, adj: '5 perces' },
+    { key: '10', value: '10', unit: 'perc', min: 10, adj: '10 perces' },
+    { key: '15', value: '15', unit: 'perc', min: 15, adj: '15 perces' },
+    { key: '20', value: '20', unit: 'perc', min: 20, adj: '20 perces' },
+    { key: '30', value: '30', unit: 'perc', min: 30, adj: '30 perces' },
+    { key: '45', value: '45', unit: 'perc', min: 45, adj: '45 perces' },
+    { key: '60', value: '1', unit: 'óra', min: 60, adj: '1 órás' },
+    { key: '90', value: '1,5', unit: 'óra', min: 90, adj: '1,5 órás' },
+    { key: '120', value: '2', unit: 'óra', min: 120, adj: '2 órás' }
+  ];
+
+  var ICON = {
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17.5 19 7"></polyline></svg>',
+    checkAccent: '<svg viewBox="0 0 24 24" fill="none" stroke="#1E5A46" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17.5 19 7"></polyline></svg>',
+    minus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"></path></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>',
+    stop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>',
+    bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9.5a6 6 0 0 1 12 0c0 5.5 2.5 7 2.5 7h-17S6 15 6 9.5z"></path><path d="M10 20a2 2 0 0 0 4 0"></path></svg>',
+    bag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2L5 8z"></path><path d="M9 8V6.5a3 3 0 0 1 6 0V8"></path></svg>',
+    ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17.5 19 7"></polyline></svg>'
+  };
+
+  var S = {
+    data: { categories: [], products: [], recipes: [] },
+    loaded: false,
+    view: 'kamra',
+    cat: null,
+    edit: false,
+    adding: false,
+    saving: false,
+    recipe: null,
+    timer: null,   // { key, endAt, total }
+    alarm: null,   // { label }
+    pending: 0,
+    timerShape: ''
+  };
+
+  function $(id) { return document.getElementById(id); }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function closest(el, selector) {
+    while (el && el.nodeType === 1) {
+      if (el.matches ? el.matches(selector) : el.webkitMatchesSelector(selector)) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+
+  /* ---------------- Szerverhívások ---------------- */
+
+  function call(fn, args, onOk, onFail) {
+    S.pending++;
+    var runner = server()
+      .withSuccessHandler(function (res) {
+        S.pending--;
+        if (onOk) onOk(res);
+      })
+      .withFailureHandler(function (err) {
+        S.pending--;
+        var msg = (err && err.message) ? err.message : String(err);
+        if (onFail) onFail(msg); else toast('Hiba: ' + msg);
+      });
+    runner[fn].apply(runner, [KEY].concat(args || []));
+  }
+
+  function refresh(initial) {
+    if (!initial && (S.pending > 0 || S.edit || S.adding)) return;
+    call('getState', [], applyData, function (msg) {
+      if (!S.loaded) {
+        $('loadingText').textContent = 'Nem sikerült betölteni: ' + msg;
+        $('retryBtn').hidden = false;
+      }
+    });
+  }
+
+  function applyData(d) {
+    S.data = {
+      categories: d.categories || [],
+      products: d.products || [],
+      recipes: d.recipes || []
+    };
+    var cats = S.data.categories;
+    if (!S.cat || !cats.some(function (c) { return c.id === S.cat; })) {
+      S.cat = cats.length ? cats[0].id : null;
+    }
+    if (S.recipe && !S.data.recipes.some(function (r) { return r.id === S.recipe; })) {
+      S.recipe = null;
+    }
+    if (!S.loaded) {
+      S.loaded = true;
+      $('loading').hidden = true;
+    }
+    renderView();
+  }
+
+  /* ---------------- Nézetek ---------------- */
+
+  function setView(view) {
+    if (S.edit) exitEdit();
+    S.view = view;
+    renderView();
+  }
+
+  function renderView() {
+    var tabs = document.querySelectorAll('.tab');
+    for (var i = 0; i < tabs.length; i++) {
+      var on = tabs[i].getAttribute('data-view') === S.view;
+      tabs[i].className = 'tab' + (on ? ' is-active' : '');
+      if (on) tabs[i].setAttribute('aria-current', 'page'); else tabs[i].removeAttribute('aria-current');
+    }
+    $('view-kamra').hidden = S.view !== 'kamra';
+    $('view-receptek').hidden = S.view !== 'receptek';
+    $('view-idozito').hidden = S.view !== 'idozito';
+    if (S.view === 'kamra') { renderCats(); renderItems(); }
+    if (S.view === 'receptek') renderRecipes();
+    if (S.view === 'idozito') renderTimer(true);
+    renderChip();
+  }
+
+  /* ---------------- Kamra ---------------- */
+
+  function currentCat() {
+    for (var i = 0; i < S.data.categories.length; i++) {
+      if (S.data.categories[i].id === S.cat) return S.data.categories[i];
+    }
+    return null;
+  }
+
+  function productsOf(catId) {
+    var ps = S.data.products.filter(function (p) { return p.catId === catId; });
+    var missing = ps.filter(function (p) { return !p.have; })
+      .sort(function (a, b) { return b.missingSince - a.missingSince; });
+    var have = ps.filter(function (p) { return p.have; })
+      .sort(function (a, b) { return a.order - b.order; });
+    return missing.concat(have);
+  }
+
+  function findProduct(id) {
+    for (var i = 0; i < S.data.products.length; i++) {
+      if (S.data.products[i].id === id) return S.data.products[i];
+    }
+    return null;
+  }
+
+  function renderCats() {
+    $('cats').innerHTML = S.data.categories.map(function (c) {
+      var on = c.id === S.cat;
+      return '<button type="button" class="rail-btn' + (on ? ' is-active' : '') + '" data-cat="' + esc(c.id) + '"' +
+        (on ? ' aria-current="true"' : '') + '>' + esc(c.name) + '</button>';
+    }).join('');
+  }
+
+  function renderItems() {
+    var cat = currentCat();
+    $('catTitle').textContent = cat ? cat.name : 'Nincs kategória';
+    $('editHint').hidden = !S.edit;
+    $('doneBtn').hidden = !S.edit;
+    if (!cat) { $('items').innerHTML = ''; return; }
+    var list = productsOf(cat.id);
+
+    if (S.edit) {
+      $('items').innerHTML = list.map(function (p) {
+        return '<div class="tile is-edit ' + (p.have ? 'is-have' : 'is-missing') + '">' +
+          '<button type="button" class="del" data-del="' + esc(p.id) + '" aria-label="Törlés: ' + esc(p.name) + '"><span>' + ICON.minus + '</span></button>' +
+          '<span class="tile-label">' + esc(p.name) + '</span></div>';
+      }).join('') +
+        '<button type="button" class="add-tile" data-add="1">' + ICON.plus + '<span>Új termék</span></button>';
+      return;
+    }
+
+    if (!list.length) {
+      $('items').innerHTML = '<div class="empty"><p>Ebben a kategóriában még nincs termék.</p>' +
+        '<button type="button" class="btn-dashed" data-start-add="1">' + ICON.plus + '<span>Termék hozzáadása</span></button></div>';
+      return;
+    }
+
+    $('items').innerHTML = list.map(function (p) {
+      if (p.have) {
+        return '<button type="button" class="tile is-have" data-item="' + esc(p.id) + '" aria-pressed="true">' +
+          '<span class="tick" aria-hidden="true">' + ICON.check + '</span>' +
+          '<span class="tile-label">' + esc(p.name) + '</span></button>';
+      }
+      return '<button type="button" class="tile is-missing" data-item="' + esc(p.id) + '" aria-pressed="false">' +
+        '<span class="ring" aria-hidden="true"></span>' +
+        '<span class="tile-label">' + esc(p.name) + '</span></button>';
+    }).join('');
+  }
+
+  function toggleHave(id) {
+    var p = findProduct(id);
+    if (!p) return;
+    var prev = { have: p.have, missingSince: p.missingSince };
+    p.have = !p.have;
+    p.missingSince = p.have ? 0 : Date.now();
+    renderPantryViews();
+    call('setHave', [p.id, p.have], null, function (msg) {
+      p.have = prev.have;
+      p.missingSince = prev.missingSince;
+      renderPantryViews();
+      toast('Nem sikerült menteni: ' + msg);
+    });
+  }
+
+  // A kamra állapota a Kamra és a Receptek nézetben is látszik.
+  function renderPantryViews() {
+    if (S.view === 'kamra') renderItems();
+    if (S.view === 'receptek') renderRecipes();
+  }
+
+  function removeProduct(id) {
+    var idx = -1;
+    for (var i = 0; i < S.data.products.length; i++) {
+      if (S.data.products[i].id === id) { idx = i; break; }
+    }
+    if (idx === -1) return;
+    var removed = S.data.products.splice(idx, 1)[0];
+    renderItems();
+    call('deleteProduct', [id], null, function (msg) {
+      S.data.products.splice(idx, 0, removed);
+      if (S.view === 'kamra') renderItems();
+      toast('Nem sikerült törölni: ' + msg);
+    });
+  }
+
+  function enterEdit() {
+    S.edit = true;
+    renderItems();
+  }
+
+  function exitEdit() {
+    S.edit = false;
+    closeAdd();
+    renderItems();
+  }
+
+  /* Hosszú nyomás (touch és egér) */
+  var lp = { timer: null, fired: false, x: 0, y: 0 };
+
+  function lpStart(x, y, target) {
+    if (S.edit || !closest(target, '[data-item]')) return;
+    lp.fired = false;
+    lp.x = x; lp.y = y;
+    clearTimeout(lp.timer);
+    lp.timer = setTimeout(function () {
+      lp.fired = true;
+      enterEdit();
+    }, LONG_PRESS_MS);
+  }
+
+  function lpCancel() { clearTimeout(lp.timer); }
+
+  function bindLongPress(el) {
+    el.addEventListener('touchstart', function (e) {
+      var t = e.touches[0];
+      lpStart(t.clientX, t.clientY, e.target);
+    }, { passive: true });
+    el.addEventListener('touchmove', function (e) {
+      var t = e.touches[0];
+      if (Math.abs(t.clientX - lp.x) > 10 || Math.abs(t.clientY - lp.y) > 10) lpCancel();
+    }, { passive: true });
+    el.addEventListener('touchend', lpCancel);
+    el.addEventListener('touchcancel', lpCancel);
+    el.addEventListener('mousedown', function (e) { lpStart(e.clientX, e.clientY, e.target); });
+    el.addEventListener('mouseup', lpCancel);
+    el.addEventListener('mouseleave', lpCancel);
+    el.addEventListener('contextmenu', function (e) { if (closest(e.target, '[data-item]')) e.preventDefault(); });
+  }
+
+  /* Új termék */
+  function openAdd() {
+    var cat = currentCat();
+    if (!cat) return;
+    S.adding = true;
+    $('addCat').textContent = cat.name;
+    $('newName').value = '';
+    $('addError').hidden = true;
+    setSaving(false);
+    $('addDialog').hidden = false;
+    setTimeout(function () { try { $('newName').focus(); } catch (e) {} }, 50);
+  }
+
+  function closeAdd() {
+    S.adding = false;
+    $('addDialog').hidden = true;
+    try { $('newName').blur(); } catch (e) {}
+  }
+
+  function setSaving(on) {
+    S.saving = on;
+    $('addConfirm').disabled = on;
+    $('addCancel').disabled = on;
+    $('addConfirm').textContent = on ? 'Mentés…' : 'Hozzáadás';
+  }
+
+  function showAddError(msg) {
+    $('addError').textContent = msg;
+    $('addError').hidden = false;
+  }
+
+  function confirmAdd() {
+    if (S.saving) return;
+    var cat = currentCat();
+    var name = $('newName').value.replace(/\s+/g, ' ').trim();
+    if (!cat) return;
+    if (!name) { showAddError('Adj meg egy nevet.'); return; }
+    var lower = name.toLowerCase();
+    var dup = S.data.products.some(function (p) { return p.catId === cat.id && p.name.toLowerCase() === lower; });
+    if (dup) { showAddError('Ez a termék már szerepel ebben a kategóriában.'); return; }
+    setSaving(true);
+    call('addProduct', [cat.id, name], function (product) {
+      setSaving(false);
+      S.data.products.push(product);
+      closeAdd();
+      renderItems();
+    }, function (msg) {
+      setSaving(false);
+      showAddError(msg);
+    });
+  }
+
+  /* ---------------- Receptek ---------------- */
+
+  // A hozzávalók név szerint kapcsolódnak a kamra termékeihez.
+  function productIndex() {
+    var idx = {};
+    S.data.products.forEach(function (p) {
+      var k = p.name.toLowerCase();
+      if (!idx[k]) idx[k] = p;
+    });
+    return idx;
+  }
+
+  function recipeStatus(r, idx) {
+    return r.ingredients.map(function (ing) {
+      return { ing: ing, product: idx[String(ing.name || '').toLowerCase()] || null };
+    });
+  }
+
+  // A hiányzó termékek egyszer szerepelnek, akkor is, ha a receptben többször előfordulnak.
+  function missingProducts(status) {
+    var seen = {};
+    return status.filter(function (x) {
+      if (!x.product || x.product.have || seen[x.product.id]) return false;
+      seen[x.product.id] = true;
+      return true;
+    }).map(function (x) { return x.product; });
+  }
+
+  function qtyText(ing) {
+    var q = ing.qty;
+    var s = (q === null || q === undefined || q === '') ? '' : String(q).replace('.', ',');
+    return (s ? s + ' ' : '') + (ing.unit || '');
+  }
+
+  function renderRecipes() {
+    var idx = productIndex();
+
+    $('recipeList').innerHTML = S.data.recipes.map(function (r) {
+      var on = r.id === S.recipe;
+      var miss = missingProducts(recipeStatus(r, idx)).length;
+      return '<button type="button" class="rail-btn' + (on ? ' is-active' : '') + '" data-recipe="' + esc(r.id) + '"' +
+        (on ? ' aria-current="true"' : '') + '><span>' + esc(r.name) + '</span>' +
+        (miss ? '<span class="miss-badge" role="img" aria-label="' + miss + ' hozzávaló hiányzik">' + miss + '</span>' : '') +
+        '</button>';
+    }).join('');
+
+    var r = null;
+    for (var i = 0; i < S.data.recipes.length; i++) {
+      if (S.data.recipes[i].id === S.recipe) r = S.data.recipes[i];
+    }
+    if (!r) {
+      $('recipe').innerHTML = '<p class="placeholder">' +
+        (S.data.recipes.length ? 'Válassz egy receptet a bal oldali listából' : 'Még nincs recept a táblázatban') + '</p>';
+      return;
+    }
+
+    var status = recipeStatus(r, idx);
+    var missingNames = missingProducts(status).map(function (p) { return p.name; });
+
+    var notice = '';
+    if (missingNames.length) {
+      notice = '<div class="notice is-missing">' + ICON.bag + '<span><strong>Hiányzik: ' + esc(missingNames.join(', ')) + '.</strong> ' +
+        (missingNames.length > 1 ? 'Már rajta vannak a bevásárlólistán.' : 'Már rajta van a bevásárlólistán.') + '</span></div>';
+    } else if (status.some(function (x) { return x.product; })) {
+      notice = '<div class="notice is-ok">' + ICON.ok + '<span>Minden hozzávaló megvan itthon.</span></div>';
+    }
+
+    var rows = status.map(function (x) {
+      var qty = '<span class="qty">' + esc(qtyText(x.ing)) + '</span>';
+      var name = '<span>' + esc(x.ing.name) +
+        (x.ing.note ? ' <span class="ing-note">' + esc(x.ing.note) + '</span>' : '') + '</span>';
+      if (!x.product) {
+        return '<div class="ing is-unknown"><span class="dot" aria-hidden="true"></span>' + qty + name +
+          '<span class="note">nincs a kamrában</span></div>';
+      }
+      if (x.product.have) {
+        return '<button type="button" class="ing" data-product="' + esc(x.product.id) + '" aria-pressed="true">' +
+          '<span class="tick" aria-hidden="true">' + ICON.check + '</span>' + qty + name + '<span></span></button>';
+      }
+      return '<button type="button" class="ing is-missing" data-product="' + esc(x.product.id) + '" aria-pressed="false">' +
+        '<span class="ring" aria-hidden="true"></span>' + qty + name + '<span class="tag">Nincs itthon</span></button>';
+    }).join('');
+
+    var ings = status.length
+      ? '<p class="ing-hint">A pipa a kamra állapota – koppintással ott is átállítod.</p><div class="ings">' + rows + '</div>'
+      : '<p class="muted">Ehhez a recepthez még nincs hozzávaló a Hozzávalók lapon.</p>';
+
+    var steps = r.steps.length ? '<section class="steps"><h2 class="eyebrow">Elkészítés</h2><ol>' +
+      r.steps.map(function (s, i) {
+        return '<li><span class="num">' + (i + 1) + '</span><span class="step-text">' + esc(s) + '</span></li>';
+      }).join('') + '</ol></section>' : '';
+
+    $('recipe').innerHTML = '<div style="display:grid;justify-items:start"><h1 class="title">' + esc(r.name) + '</h1>' + notice + '</div>' +
+      '<div class="recipe-body' + (steps ? '' : ' no-steps') + '">' +
+      '<section><h2 class="eyebrow">Összetevők</h2>' + ings + '</section>' + steps + '</div>';
+  }
+
+  /* ---------------- Időzítő ---------------- */
+
+  function presetBy(key) {
+    for (var i = 0; i < PRESETS.length; i++) if (PRESETS[i].key === key) return PRESETS[i];
+    return null;
+  }
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function fmt(ms) {
+    var t = Math.max(0, Math.ceil(ms / 1000));
+    var h = Math.floor(t / 3600);
+    var m = Math.floor((t % 3600) / 60);
+    var s = t % 60;
+    return h > 0 ? h + ':' + pad(m) + ':' + pad(s) : pad(m) + ':' + pad(s);
+  }
+
+  function remaining() { return S.timer ? S.timer.endAt - Date.now() : 0; }
+
+  function renderTimer(force) {
+    var shape = S.alarm ? 'alarm' : (S.timer ? 'run-' + S.timer.key : 'idle');
+    var root = $('view-idozito');
+    if (force || shape !== S.timerShape) {
+      S.timerShape = shape;
+      root.className = 'view timer' + (S.alarm ? ' is-alarm' : '');
+      if (S.alarm) {
+        root.innerHTML = '<section class="alarm" role="alert">' + ICON.bell +
+          '<h1>Lejárt az idő!</h1><p>' + esc(S.alarm.label) + '</p>' +
+          '<button type="button" data-dismiss="1">Rendben</button></section>';
+      } else {
+        var p = S.timer ? presetBy(S.timer.key) : null;
+        var panel = S.timer
+          ? '<p class="clock-label">' + esc(p ? p.adj + ' időzítő' : 'Időzítő') + '</p>' +
+            '<div id="clock" class="clock"></div>' +
+            '<div class="bar"><div id="progress"></div></div>' +
+            '<button type="button" class="stop" data-stop="1">' + ICON.stop + '<span>Leállítás</span></button>'
+          : '<p class="clock-label">Nincs futó időzítő</p>' +
+            '<div class="clock is-idle">00:00</div>' +
+            '<p class="clock-label" style="font-size:19px;font-weight:400">Koppints egy időre az indításhoz</p>';
+        var presets = PRESETS.map(function (q) {
+          var on = S.timer && S.timer.key === q.key;
+          return '<button type="button" class="preset' + (on ? ' is-on' : '') + '" data-preset="' + q.key + '"' +
+            ' aria-pressed="' + (on ? 'true' : 'false') + '" aria-label="' + esc(q.value + ' ' + q.unit) + '">' +
+            (on ? '<span class="on-tick">' + ICON.checkAccent + '</span>' : '') +
+            '<span class="v">' + esc(q.value) + '</span><span class="u">' + esc(q.unit) + '</span></button>';
+        }).join('');
+        root.innerHTML = '<section class="clock-panel" aria-live="polite">' + panel + '</section>' +
+          '<div class="presets">' + presets + '</div>';
+      }
+    }
+    if (S.timer && !S.alarm) {
+      var left = remaining();
+      var clock = $('clock');
+      if (clock) {
+        clock.textContent = fmt(left);
+        clock.className = 'clock' + (left >= 3600000 ? ' is-long' : '');
+      }
+      var bar = $('progress');
+      if (bar) bar.style.width = Math.max(0, Math.min(100, left / S.timer.total * 100)) + '%';
+    }
+  }
+
+  function renderChip() {
+    var chip = $('chip');
+    var show = (S.timer || S.alarm) && S.view !== 'idozito';
+    chip.hidden = !show;
+    if (!show) return;
+    chip.className = 'chip' + (S.alarm ? ' is-alarm' : '');
+    $('chipText').textContent = S.alarm ? 'Lejárt az idő' : fmt(remaining());
+  }
+
+  function saveTimer() {
+    try {
+      if (S.timer) localStorage.setItem(TIMER_KEY, JSON.stringify(S.timer));
+      else localStorage.removeItem(TIMER_KEY);
+    } catch (e) {}
+  }
+
+  function restoreTimer() {
+    try {
+      var t = JSON.parse(localStorage.getItem(TIMER_KEY) || 'null');
+      if (!t || !t.endAt || !presetBy(t.key)) return;
+      if (t.endAt > Date.now()) {
+        S.timer = t;
+      } else if (Date.now() - t.endAt < 10 * 60000) {
+        S.timer = t;            // újratöltés közben járt le: a következő tick riaszt
+      } else {
+        localStorage.removeItem(TIMER_KEY);
+      }
+    } catch (e) {}
+  }
+
+  function startTimer(key) {
+    var p = presetBy(key);
+    if (!p) return;
+    unlockAudio();
+    var ms = p.min * 60000;
+    S.timer = { key: key, endAt: Date.now() + ms, total: ms };
+    S.alarm = null;
+    saveTimer();
+    renderTimer(true);
+    renderChip();
+  }
+
+  function stopTimer() {
+    S.timer = null;
+    saveTimer();
+    renderTimer(true);
+    renderChip();
+  }
+
+  function fireAlarm() {
+    var p = presetBy(S.timer.key);
+    S.alarm = { label: (p ? p.adj : '') + ' időzítő' };
+    S.timer = null;
+    saveTimer();
+    if (S.edit) { S.edit = false; closeAdd(); }
+    S.view = 'idozito';
+    renderView();
+    startBeeping();
+  }
+
+  function dismissAlarm() {
+    S.alarm = null;
+    stopBeeping();
+    renderTimer(true);
+    renderChip();
+  }
+
+  /* Hang: iOS-en csak érintés után indítható, ezért az első érintéskor feloldjuk. */
+  var audio = null;
+  var beepTimer = null;
+
+  function unlockAudio() {
+    try {
+      if (!audio) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) audio = new AC();
+      }
+      if (audio && audio.state === 'suspended') audio.resume();
+    } catch (e) {}
+  }
+
+  function beep() {
+    try {
+      if (!audio || audio.state !== 'running') return;
+      var t = audio.currentTime;
+      var o = audio.createOscillator();
+      var g = audio.createGain();
+      o.type = 'sine';
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.5, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+      o.connect(g);
+      g.connect(audio.destination);
+      o.start(t);
+      o.stop(t + 0.4);
+    } catch (e) {}
+  }
+
+  function startBeeping() {
+    stopBeeping();
+    beep();
+    beepTimer = setInterval(beep, 1200);
+  }
+
+  function stopBeeping() {
+    clearInterval(beepTimer);
+    beepTimer = null;
+  }
+
+  function tick() {
+    if (S.timer && Date.now() >= S.timer.endAt) {
+      fireAlarm();
+      return;
+    }
+    if (S.view === 'idozito') renderTimer(false);
+    renderChip();
+  }
+
+  /* ---------------- Értesítés ---------------- */
+
+  var toastTimer = null;
+  function toast(msg) {
+    var el = $('toast');
+    el.textContent = msg;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.hidden = true; }, 5000);
+  }
+
+  /* ---------------- Események ---------------- */
+
+  function bind() {
+    document.querySelector('.tabs').addEventListener('click', function (e) {
+      var b = closest(e.target, '[data-view]');
+      if (b) setView(b.getAttribute('data-view'));
+    });
+    $('chip').addEventListener('click', function () { setView('idozito'); });
+
+    $('cats').addEventListener('click', function (e) {
+      var b = closest(e.target, '[data-cat]');
+      if (!b) return;
+      S.cat = b.getAttribute('data-cat');
+      renderCats();
+      renderItems();
+    });
+
+    var items = $('items');
+    bindLongPress(items);
+    items.addEventListener('click', function (e) {
+      var del = closest(e.target, '[data-del]');
+      if (del) { removeProduct(del.getAttribute('data-del')); return; }
+      if (closest(e.target, '[data-add]')) { openAdd(); return; }
+      if (closest(e.target, '[data-start-add]')) { enterEdit(); openAdd(); return; }
+      var b = closest(e.target, '[data-item]');
+      if (!b) return;
+      if (lp.fired) { lp.fired = false; return; }
+      if (!S.edit) toggleHave(b.getAttribute('data-item'));
+    });
+    $('doneBtn').addEventListener('click', exitEdit);
+
+    $('addCancel').addEventListener('click', closeAdd);
+    $('addConfirm').addEventListener('click', confirmAdd);
+    $('newName').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); confirmAdd(); }
+    });
+    $('newName').addEventListener('input', function () { $('addError').hidden = true; });
+    $('addDialog').addEventListener('click', function (e) {
+      if (e.target === $('addDialog') && !S.saving) closeAdd();
+    });
+
+    $('recipeList').addEventListener('click', function (e) {
+      var b = closest(e.target, '[data-recipe]');
+      if (!b) return;
+      S.recipe = b.getAttribute('data-recipe');
+      renderRecipes();
+    });
+    $('recipe').addEventListener('click', function (e) {
+      var b = closest(e.target, '[data-product]');
+      if (b) toggleHave(b.getAttribute('data-product'));
+    });
+
+    $('view-idozito').addEventListener('click', function (e) {
+      var p = closest(e.target, '[data-preset]');
+      if (p) { startTimer(p.getAttribute('data-preset')); return; }
+      if (closest(e.target, '[data-stop]')) { stopTimer(); return; }
+      if (closest(e.target, '[data-dismiss]')) { dismissAlarm(); }
+    });
+
+    // iOS: az első érintés feloldja a hangot, hogy a riasztás meg tudjon szólalni.
+    document.addEventListener('touchend', unlockAudio, { passive: true });
+    document.addEventListener('click', unlockAudio);
+
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) refresh(false);
+    });
+    $('retryBtn').addEventListener('click', function () {
+      $('retryBtn').hidden = true;
+      $('loadingText').textContent = 'Betöltés…';
+      refresh(true);
+    });
+  }
+
+  bind();
+  restoreTimer();
+  renderView();
+  refresh(true);
+  setInterval(function () { refresh(false); }, POLL_MS);
+  setInterval(tick, 250);
+})();
+</script>
+</body>
+</html>
