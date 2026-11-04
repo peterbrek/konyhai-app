@@ -154,6 +154,12 @@
     display: grid; align-items: center; justify-items: center; font-size: 15px; font-weight: 700;
   }
   .rail-btn.is-active .miss-badge { border-color: var(--sel-fg); color: var(--sel-fg); }
+  .ok-badge {
+    width: 30px; height: 30px; border-radius: 15px; background: var(--accent-fill); color: var(--on-accent);
+    display: grid; align-items: center; justify-items: center;
+  }
+  .ok-badge svg { width: 18px; height: 18px; }
+  .rail-btn.is-draft { font-style: italic; }
   .pane { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 32px 44px 48px; }
   .pane-head {
     display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; grid-gap: 16px;
@@ -210,14 +216,6 @@
   .edit-empty { grid-column: 1 / -1; margin: 0; font-size: 19px; color: var(--muted); }
 
   /* Receptek */
-  .rail-add {
-    width: 100%; padding: 9px 14px 9px 16px; border: 2px solid var(--accent); border-radius: 14px; background: transparent; color: var(--accent);
-    display: grid; grid-auto-flow: column; justify-content: start; align-items: center; grid-gap: 8px;
-    text-align: left; font-size: 20px; font-weight: 600;
-  }
-  .rail-add svg { width: 22px; height: 22px; }
-  .rail.is-locked { pointer-events: none; }
-  .rail.is-locked > * { opacity: 0.45; }
   .recipe-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-gap: 16px; align-items: start; }
   .recipe-head > div { display: grid; justify-items: start; }
 
@@ -241,7 +239,7 @@
   .ed-section { margin-top: 28px; display: grid; grid-gap: 10px; }
   .ed-section .eyebrow, .ed-section .ing-hint { margin: 0; }
   .ed-section .btn-add { justify-self: start; margin-top: 4px; }
-  .ed-cols, .ed-row { display: grid; grid-template-columns: 76px 128px minmax(0, 1fr) 160px 44px; grid-gap: 8px; }
+  .ed-cols, .ed-row { display: grid; grid-template-columns: 76px 158px minmax(0, 1fr) 160px 44px; grid-gap: 8px; }
   .ed-cols { font-size: 14px; font-weight: 600; color: var(--muted); padding: 0 2px; }
   .ed-rows { display: grid; grid-gap: 10px; }
   .ed-row { align-items: start; }
@@ -266,7 +264,8 @@
     display: grid; align-items: center; justify-items: center;
   }
   .row-del svg { width: 15px; height: 15px; }
-  .ed-danger { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .ed-danger { margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--line); display: grid; grid-auto-flow: column; justify-content: start; grid-gap: 12px; }
+  .form-head + .hint { margin-top: 10px; }
   .btn-danger {
     height: 52px; padding: 0 22px; border: 2px solid var(--alarm); border-radius: 14px;
     background: transparent; color: var(--error-text); font-size: 18px; font-weight: 600;
@@ -398,8 +397,7 @@
     .split { grid-template-columns: 256px minmax(0, 1fr); }
     .rail { padding: 20px 16px; }
     .rail-btn { padding: 8px 12px 8px 14px; font-size: 18px; }
-    .rail-add { padding: 8px 12px 8px 14px; font-size: 18px; }
-    .ed-cols, .ed-row { grid-template-columns: 70px 118px minmax(0, 1fr) 140px 44px; }
+    .ed-cols, .ed-row { grid-template-columns: 70px 150px minmax(0, 1fr) 132px 44px; }
     .in { font-size: 18px; }
     .pane { padding: 28px 28px 40px; }
     .timer { grid-template-columns: minmax(0, 1fr) minmax(0, 470px); padding: 32px; grid-gap: 28px; }
@@ -627,6 +625,7 @@
     alarm: null,   // { label }
     pending: 0,
     writes: 0,     // módosító hívások száma: egy közben elindult frissítés régi adatot hozhat
+    recipeEdit: false, // receptek szerkesztő módja
     draft: null,   // szerkesztés alatt álló recept
     timerShape: ''
   };
@@ -713,6 +712,10 @@
 
   function setView(view) {
     if (S.edit) exitEdit();
+    if (S.recipeEdit && view !== 'receptek') {
+      finishRecipeEdit(function () { S.view = view; renderView(); });
+      return;
+    }
     S.view = view;
     renderView();
   }
@@ -852,20 +855,21 @@
   /* Hosszú nyomás (touch és egér) */
   var lp = { timer: null, fired: false, x: 0, y: 0 };
 
-  function lpStart(x, y, target) {
-    if (S.edit || !closest(target, '[data-item]')) return;
-    lp.fired = false;
-    lp.x = x; lp.y = y;
-    clearTimeout(lp.timer);
-    lp.timer = setTimeout(function () {
-      lp.fired = true;
-      enterEdit();
-    }, LONG_PRESS_MS);
-  }
-
   function lpCancel() { clearTimeout(lp.timer); }
 
-  function bindLongPress(el) {
+  // selector: mire lehet hosszan nyomni; canStart: most indulhat-e; onFire(elem): mi történjen.
+  function bindLongPress(el, selector, canStart, onFire) {
+    function lpStart(x, y, target) {
+      var hit = closest(target, selector);
+      if (!hit || !canStart()) return;
+      lp.fired = false;
+      lp.x = x; lp.y = y;
+      clearTimeout(lp.timer);
+      lp.timer = setTimeout(function () {
+        lp.fired = true;
+        onFire(hit);
+      }, LONG_PRESS_MS);
+    }
     el.addEventListener('touchstart', function (e) {
       var t = e.touches[0];
       lpStart(t.clientX, t.clientY, e.target);
@@ -879,7 +883,7 @@
     el.addEventListener('mousedown', function (e) { lpStart(e.clientX, e.clientY, e.target); });
     el.addEventListener('mouseup', lpCancel);
     el.addEventListener('mouseleave', lpCancel);
-    el.addEventListener('contextmenu', function (e) { if (closest(e.target, '[data-item]')) e.preventDefault(); });
+    el.addEventListener('contextmenu', function (e) { if (closest(e.target, selector)) e.preventDefault(); });
   }
 
   /* Új termék */
@@ -971,28 +975,43 @@
 
   function renderRecipes() {
     var idx = productIndex();
+    var d = S.draft;
+    var newDraft = S.recipeEdit && d && !d.id;
 
-    $('recipeList').className = 'rail' + (S.draft ? ' is-locked' : '');
-    $('recipeList').innerHTML = '<button type="button" class="rail-add" data-new-recipe="1">' + ICON.plus + '<span>Új recept</span></button>' +
-      S.data.recipes.map(function (r) {
-      var on = r.id === S.recipe;
-      var miss = missingProducts(recipeStatus(r, idx)).length;
+    var items = S.data.recipes.map(function (r) {
+      var on = r.id === S.recipe && !newDraft;
+      var status = recipeStatus(r, idx);
+      var miss = missingProducts(status).length;
+      var linked = status.some(function (x) { return x.product; });
+      var badge = '';
+      if (miss) {
+        badge = '<span class="miss-badge" role="img" aria-label="' + miss + ' hozzávaló hiányzik">' + miss + '</span>';
+      } else if (linked) {
+        badge = '<span class="ok-badge" role="img" aria-label="Minden hozzávaló megvan">' + ICON.check + '</span>';
+      }
       return '<button type="button" class="rail-btn' + (on ? ' is-active' : '') + '" data-recipe="' + esc(r.id) + '"' +
-        (on ? ' aria-current="true"' : '') + '><span>' + esc(r.name) + '</span>' +
-        (miss ? '<span class="miss-badge" role="img" aria-label="' + miss + ' hozzávaló hiányzik">' + miss + '</span>' : '') +
-        '</button>';
-      }).join('');
+        (on ? ' aria-current="true"' : '') + '><span>' + esc(r.name) + '</span>' + badge + '</button>';
+    });
+    if (newDraft) {
+      // A készülő új recept a lista tetején látszik; mentés után a végére kerül.
+      items.unshift('<button type="button" class="rail-btn is-active is-draft" data-draft-item="1" aria-current="true"><span>' +
+        esc(d.name.trim() || 'Új recept') + '</span></button>');
+    }
+    $('recipeList').innerHTML = items.join('');
 
-    if (S.draft) { renderRecipeForm(); return; }
+    if (S.recipeEdit) {
+      if (d) renderRecipeForm();
+      else renderEditPlaceholder();
+      return;
+    }
     $('recipe').removeAttribute('data-form');
 
-    var r = null;
-    for (var i = 0; i < S.data.recipes.length; i++) {
-      if (S.data.recipes[i].id === S.recipe) r = S.data.recipes[i];
-    }
+    var r = findRecipe(S.recipe);
     if (!r) {
-      $('recipe').innerHTML = '<p class="placeholder">' +
-        (S.data.recipes.length ? 'Válassz egy receptet a bal oldali listából' : 'Még nincs recept. Az „Új recept” gombbal hozhatsz létre egyet.') + '</p>';
+      $('recipe').innerHTML = S.data.recipes.length
+        ? '<p class="placeholder">Válassz egy receptet a bal oldali listából</p>'
+        : '<div class="empty"><p>Még nincs recept.</p>' +
+          '<button type="button" class="btn-add" data-start-recipe="1">' + ICON.plus + '<span>Recept hozzáadása</span></button></div>';
       return;
     }
 
@@ -1025,20 +1044,25 @@
 
     var ings = status.length
       ? '<p class="ing-hint">A pipa a kamra állapota – koppintással ott is átállítod.</p><div class="ings">' + rows + '</div>'
-      : '<p class="muted">Ehhez a recepthez még nincs hozzávaló. A Szerkesztés gombbal adhatsz hozzá.</p>';
+      : '<p class="muted">Ehhez a recepthez még nincs hozzávaló. Hozzáadni a receptre hosszan nyomva, szerkesztő módban lehet.</p>';
 
     var steps = r.steps.length ? '<section class="steps"><h2 class="eyebrow">Elkészítés</h2><ol>' +
       r.steps.map(function (s, i) {
         return '<li><span class="num">' + (i + 1) + '</span><span class="step-text">' + esc(s) + '</span></li>';
       }).join('') + '</ol></section>' : '';
 
-    $('recipe').innerHTML = '<div class="recipe-head"><div><h1 class="title">' + esc(r.name) + '</h1>' + notice + '</div>' +
-      '<button type="button" class="btn-secondary btn-icon" data-edit-recipe="' + esc(r.id) + '">' + ICON.edit + '<span>Szerkesztés</span></button></div>' +
+    $('recipe').innerHTML = '<div class="recipe-head"><div><h1 class="title">' + esc(r.name) + '</h1>' + notice + '</div></div>' +
       '<div class="recipe-body' + (steps ? '' : ' no-steps') + '">' +
       '<section><h2 class="eyebrow">Összetevők</h2>' + ings + '</section>' + steps + '</div>';
   }
 
-  /* ---------------- Recept szerkesztése ---------------- */
+  /* ---------------- Recept szerkesztése ----------------
+   * A Kamrához hasonlóan: a bal oldali listában egy receptet hosszan nyomva bekapcsol a szerkesztő mód.
+   * Ilyenkor minden recept szerkeszthető, a módosítás másik recept választásakor, az „Új recept”
+   * gombra vagy a „Kész” gombra mentődik.
+   */
+
+  var draftSeq = 0;
 
   function findRecipe(id) {
     for (var i = 0; i < S.data.recipes.length; i++) {
@@ -1053,35 +1077,95 @@
 
   function emptyIng() { return { qty: '', unit: '', name: '', note: '' }; }
 
-  function startEdit(id) {
-    var r = findRecipe(id);
-    if (!r) return;
-    S.draft = {
-      uid: 'r' + Date.now(),
-      id: r.id,
-      name: r.name,
-      ings: r.ingredients.map(function (x) {
+  // A piszkozat lényege, összehasonlításhoz: a fölösleges szóközök és az üres sorok nem számítanak.
+  function draftKey(d) {
+    return JSON.stringify({
+      name: d.name.replace(/\s+/g, ' ').trim(),
+      ings: d.ings.map(function (x) {
+        return [x.qty.trim(), x.unit, x.name.replace(/\s+/g, ' ').trim(), x.note.trim()];
+      }).filter(function (x) { return x.join(''); }),
+      steps: d.steps.split(/\r?\n/).map(function (s) { return s.trim(); }).filter(function (s) { return s; })
+    });
+  }
+
+  function makeDraft(r) {
+    var d = {
+      uid: 'r' + (++draftSeq),
+      id: r ? r.id : null,
+      name: r ? r.name : '',
+      ings: r ? r.ingredients.map(function (x) {
         return { qty: qtyInput(x.qty), unit: x.unit || '', name: x.name || '', note: x.note || '' };
-      }),
-      steps: r.steps.join('\n'),
+      }) : [],
+      steps: r ? r.steps.join('\n') : '',
       saving: false,
       confirmDel: false
     };
-    if (!S.draft.ings.length) S.draft.ings.push(emptyIng());
+    if (!d.ings.length) d.ings.push(emptyIng());
+    d.snapshot = draftKey(d);
+    return d;
+  }
+
+  function isDirty(d) { return draftKey(d) !== d.snapshot; }
+
+  function enterRecipeEdit(id) {
+    if (id) S.recipe = id;
+    S.recipeEdit = true;
+    var r = findRecipe(S.recipe);
+    S.draft = r ? makeDraft(r) : null;
     renderRecipes();
     $('recipe').scrollTop = 0;
+  }
+
+  /**
+   * A szerkesztett recept elhagyása: ha változott, előbb ment, és csak siker esetén lép tovább.
+   * Egy teljesen üres új receptet mentés nélkül eldob.
+   */
+  function leaveDraft(next) {
+    var d = S.draft;
+    if (!d) { next(); return; }
+    if (d.saving) return;
+    if (!isDirty(d)) { S.draft = null; next(); return; }
+    saveDraft(next);
+  }
+
+  function selectInEdit(id) {
+    if (S.draft && S.draft.id === id) return;
+    leaveDraft(function () {
+      S.recipe = id;
+      S.draft = makeDraft(findRecipe(id));
+      renderRecipes();
+      $('recipe').scrollTop = 0;
+    });
   }
 
   function startNew() {
-    S.draft = { uid: 'r' + Date.now(), id: null, name: '', ings: [emptyIng()], steps: '', saving: false, confirmDel: false };
-    renderRecipes();
-    $('recipe').scrollTop = 0;
-    setTimeout(function () { try { $('rName').focus(); } catch (e) {} }, 50);
+    leaveDraft(function () {
+      S.recipeEdit = true;
+      S.draft = makeDraft(null);
+      renderRecipes();
+      $('recipe').scrollTop = 0;
+      setTimeout(function () { try { $('rName').focus(); } catch (e) {} }, 50);
+    });
   }
 
-  function closeDraft() {
-    S.draft = null;
+  function finishRecipeEdit(after) {
+    leaveDraft(function () {
+      S.recipeEdit = false;
+      S.draft = null;
+      if (after) after(); else renderRecipes();
+    });
+  }
+
+  function discardDraft() {
+    var d = S.draft;
+    if (!d || d.saving) return;
+    if (d.id) {
+      S.draft = makeDraft(findRecipe(d.id));
+    } else {
+      S.draft = findRecipe(S.recipe) ? makeDraft(findRecipe(S.recipe)) : null;
+    }
     renderRecipes();
+    $('recipe').scrollTop = 0;
   }
 
   function unitOptions(selected) {
@@ -1090,6 +1174,22 @@
     return '<option value="">–</option>' + units.map(function (u) {
       return '<option value="' + esc(u) + '"' + (u === selected ? ' selected' : '') + '>' + esc(u) + '</option>';
     }).join('');
+  }
+
+  function editActions() {
+    return '<div class="head-actions">' +
+      '<button type="button" id="rNew" class="btn-add" data-new-recipe="1">' + ICON.plus + '<span>Új recept</span></button>' +
+      '<button type="button" id="rDone" class="btn-primary" data-done-recipes="1">Kész</button>' +
+      '</div>';
+  }
+
+  function renderEditPlaceholder() {
+    var pane = $('recipe');
+    if (pane.getAttribute('data-form') === 'none') return;
+    pane.setAttribute('data-form', 'none');
+    pane.innerHTML = '<div class="form-head"><div><p class="eyebrow">Receptek szerkesztése</p>' +
+      '<h1 class="title">Válassz receptet</h1></div>' + editActions() + '</div>' +
+      '<p class="hint">Bal oldalt válaszd ki, melyik receptet szerkesztenéd, vagy hozz létre újat.</p>';
   }
 
   // Az űrlap egyszer épül fel; a háttérfrissítés nem rajzolja újra, hogy a gépelés ne vesszen el.
@@ -1102,10 +1202,8 @@
       '<div class="form-head"><div>' +
         '<p class="eyebrow">' + (d.id ? 'Recept szerkesztése' : 'Új recept') + '</p>' +
         '<input id="rName" class="in in-title" type="text" maxlength="80" placeholder="A recept neve" value="' + esc(d.name) + '" autocomplete="off" aria-label="A recept neve">' +
-      '</div><div class="head-actions">' +
-        '<button type="button" id="rCancel" class="btn-secondary" data-cancel-recipe="1">Mégse</button>' +
-        '<button type="button" id="rSave" class="btn-primary" data-save-recipe="1">Mentés</button>' +
-      '</div></div>' +
+      '</div>' + editActions() + '</div>' +
+      '<p class="hint">A módosítás a Kész gombra vagy másik recept választásakor mentődik.</p>' +
       '<p id="rError" class="form-err" role="alert" hidden></p>' +
       '<section class="ed-section"><h2 class="eyebrow">Összetevők</h2>' +
         '<div class="ed-cols" aria-hidden="true"><span>Menny.</span><span>Egység</span><span>Termék a kamrából</span><span>Megjegyzés</span><span></span></div>' +
@@ -1116,7 +1214,10 @@
         '<p class="ing-hint">Egy sor egy lépés.</p>' +
         '<textarea id="rSteps" class="in" rows="8" placeholder="pl. A lisztet a tejjel csomómentesre keverjük." aria-label="Elkészítés">' + esc(d.steps) + '</textarea>' +
       '</section>' +
-      (d.id ? '<div class="ed-danger"><button type="button" id="rDelete" class="btn-danger" data-delete-recipe="1">Recept törlése</button></div>' : '');
+      '<div class="ed-danger">' +
+        '<button type="button" id="rDiscard" class="btn-secondary" data-discard-recipe="1">' + (d.id ? 'Módosítások elvetése' : 'Új recept elvetése') + '</button>' +
+        (d.id ? '<button type="button" id="rDelete" class="btn-danger" data-delete-recipe="1">Recept törlése</button>' : '') +
+      '</div>';
     renderIngRows();
     updateFormState();
   }
@@ -1138,7 +1239,7 @@
           '</div>' +
           '<p class="ed-warn" data-warn="' + i + '"' + (known ? ' hidden' : '') + '>Nincs a kamrában, így nem jelzi, ha elfogy.</p>' +
         '</div>' +
-        '<input class="in" data-f="note" data-i="' + i + '" type="text" maxlength="80" value="' + esc(x.note) + '"' + (blank ? ' placeholder="pl. olvasztott"' : '') + ' aria-label="Megjegyzés" autocomplete="off">' +
+        '<input class="in" data-f="note" data-i="' + i + '" type="text" maxlength="80" value="' + esc(x.note) + '" aria-label="Megjegyzés" autocomplete="off">' +
         '<button type="button" class="row-del" data-del-ing="' + i + '" aria-label="Hozzávaló törlése"><span>' + ICON.minus + '</span></button>' +
       '</div>';
     }).join('') || '<p class="muted">Még nincs hozzávaló.</p>';
@@ -1215,14 +1316,20 @@
     var box = document.querySelector('[data-sugg="' + i + '"]');
     if (box) box.hidden = true;
     updateWarn(i);
+    updateFormState();
   }
 
   function updateFormState() {
     var d = S.draft;
-    if (!d || !$('rSave')) return;
-    $('rSave').disabled = d.saving;
-    $('rCancel').disabled = d.saving;
-    $('rSave').textContent = d.saving ? 'Mentés…' : 'Mentés';
+    if (!d || !$('rDone')) return;
+    $('rDone').disabled = d.saving;
+    $('rNew').disabled = d.saving;
+    $('rDone').textContent = d.saving ? 'Mentés…' : 'Kész';
+    var discard = $('rDiscard');
+    if (discard) {
+      discard.disabled = d.saving;
+      discard.hidden = !!d.id && !isDirty(d);
+    }
     var del = $('rDelete');
     if (del) {
       del.disabled = d.saving;
@@ -1233,7 +1340,7 @@
 
   function formError(msg, focusEl) {
     var el = $('rError');
-    if (!el) { toast(msg); return; }
+    if (!el) { if (msg) toast(msg); return; }
     el.textContent = msg;
     el.hidden = !msg;
     if (!msg) return;
@@ -1245,25 +1352,37 @@
     var d = S.draft;
     if (!d) return;
     var t = e.target;
-    if (t.id === 'rName') { d.name = t.value; formError(''); return; }
-    if (t.id === 'rSteps') { d.steps = t.value; return; }
-    var f = t.getAttribute('data-f');
-    if (!f) return;
-    var i = Number(t.getAttribute('data-i'));
-    if (!d.ings[i]) return;
-    d.ings[i][f] = t.value;
-    formError('');
-    if (f === 'name') { showSuggestions(i); updateWarn(i); }
+    if (t.id === 'rName') {
+      d.name = t.value;
+      var item = document.querySelector('[data-draft-item] span');
+      if (item) item.textContent = d.name.trim() || 'Új recept';
+    } else if (t.id === 'rSteps') {
+      d.steps = t.value;
+    } else {
+      var f = t.getAttribute('data-f');
+      if (!f) return;
+      var i = Number(t.getAttribute('data-i'));
+      if (!d.ings[i]) return;
+      d.ings[i][f] = t.value;
+      if (f === 'name') { showSuggestions(i); updateWarn(i); }
+    }
+    if ($('rError') && !$('rError').hidden) formError('');
+    updateFormState();
   }
 
-  function saveDraft() {
+  /** Mentés; siker esetén a next() lép tovább (másik recept, új recept vagy a szerkesztő mód vége). */
+  function saveDraft(next) {
     var d = S.draft;
     if (!d || d.saving) return;
+    function stop(msg, focusEl) {
+      if (S.view !== 'receptek') { S.view = 'receptek'; renderView(); }
+      formError(msg, focusEl);
+    }
     var name = d.name.replace(/\s+/g, ' ').trim();
-    if (!name) { formError('Adj nevet a receptnek.', $('rName')); return; }
+    if (!name) { stop('Adj nevet a receptnek, vagy vesd el az új receptet.', $('rName')); return; }
     var lower = name.toLowerCase();
     if (S.data.recipes.some(function (r) { return r.id !== d.id && r.name.toLowerCase() === lower; })) {
-      formError('Már van ilyen nevű recept.', $('rName'));
+      stop('Már van ilyen nevű recept.', $('rName'));
       return;
     }
     var ingredients = [];
@@ -1277,7 +1396,7 @@
       ingredients.push(item);
     });
     if (badRow !== -1) {
-      formError('Minden hozzávalónak adj nevet, vagy töröld az üres sort.',
+      stop('Minden hozzávalónak adj nevet, vagy töröld az üres sort.',
         document.querySelector('#rIngs [data-f="name"][data-i="' + badRow + '"]'));
       return;
     }
@@ -1294,12 +1413,13 @@
       if (!replaced) S.data.recipes.push(saved);
       S.recipe = saved.id;
       if (S.draft === d) S.draft = null;
-      if (S.view === 'receptek') renderRecipes();
       toast(d.id ? 'A recept elmentve.' : 'Az új recept elmentve.');
+      if (next) next();
+      else if (S.view === 'receptek') renderRecipes();
     }, function (msg) {
       d.saving = false;
       updateFormState();
-      formError(msg);
+      stop(msg);
     });
   }
 
@@ -1336,18 +1456,20 @@
   function onRecipeClick(e) {
     var t;
     if ((t = closest(e.target, '[data-product]'))) { toggleHave(t.getAttribute('data-product')); return; }
-    if ((t = closest(e.target, '[data-edit-recipe]'))) { startEdit(t.getAttribute('data-edit-recipe')); return; }
+    if (closest(e.target, '[data-start-recipe]')) { startNew(); return; }
+    if (closest(e.target, '[data-new-recipe]')) { startNew(); return; }
+    if (closest(e.target, '[data-done-recipes]')) { finishRecipeEdit(); return; }
     var d = S.draft;
     if (!d) return;
     if ((t = closest(e.target, '[data-pick]'))) { pickSuggestion(Number(t.getAttribute('data-pick')), t.getAttribute('data-name')); return; }
-    if (closest(e.target, '[data-add-ing]')) { d.ings.push(emptyIng()); renderIngRows(d.ings.length - 1); return; }
+    if (closest(e.target, '[data-add-ing]')) { d.ings.push(emptyIng()); renderIngRows(d.ings.length - 1); updateFormState(); return; }
     if ((t = closest(e.target, '[data-del-ing]'))) {
       d.ings.splice(Number(t.getAttribute('data-del-ing')), 1);
       renderIngRows();
+      updateFormState();
       return;
     }
-    if (closest(e.target, '[data-save-recipe]')) { saveDraft(); return; }
-    if (closest(e.target, '[data-cancel-recipe]')) { if (!d.saving) closeDraft(); return; }
+    if (closest(e.target, '[data-discard-recipe]')) { discardDraft(); return; }
     if (closest(e.target, '[data-delete-recipe]')) { deleteDraftRecipe(); }
   }
 
@@ -1560,8 +1682,12 @@
       renderItems();
     });
 
+    // Minden új érintés törli az előző hosszú nyomás nyomát, hogy ne nyeljen el egy későbbi koppintást.
+    document.addEventListener('touchstart', function () { lp.fired = false; }, { capture: true, passive: true });
+    document.addEventListener('mousedown', function () { lp.fired = false; }, true);
+
     var items = $('items');
-    bindLongPress(items);
+    bindLongPress(items, '[data-item]', function () { return !S.edit; }, function () { enterEdit(); });
     items.addEventListener('click', function (e) {
       var del = closest(e.target, '[data-del]');
       if (del) { removeProduct(del.getAttribute('data-del')); return; }
@@ -1584,11 +1710,15 @@
       if (e.target === $('addDialog') && !S.saving) closeAdd();
     });
 
-    $('recipeList').addEventListener('click', function (e) {
-      if (S.draft) return;
-      if (closest(e.target, '[data-new-recipe]')) { startNew(); return; }
+    var recipeList = $('recipeList');
+    bindLongPress(recipeList, '[data-recipe]', function () { return !S.recipeEdit; }, function (b) {
+      enterRecipeEdit(b.getAttribute('data-recipe'));
+    });
+    recipeList.addEventListener('click', function (e) {
       var b = closest(e.target, '[data-recipe]');
       if (!b) return;
+      if (lp.fired) { lp.fired = false; return; }
+      if (S.recipeEdit) { selectInEdit(b.getAttribute('data-recipe')); return; }
       S.recipe = b.getAttribute('data-recipe');
       renderRecipes();
     });
