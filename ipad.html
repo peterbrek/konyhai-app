@@ -467,7 +467,7 @@
     <div>
       <h2 id="addTitle">Új termék</h2>
       <p id="addCat" class="sub"></p>
-      <p class="sub-note">Hiányzóként kerül a lista elejére, így a bevásárlólistára is rögtön felkerül.</p>
+      <p class="sub-note">Hiányzóként kerül fel, a lista elejére a többi hiányzó közé, így a bevásárlólistára is rögtön felkerül.</p>
     </div>
     <div class="field">
       <label for="newName">Termék neve</label>
@@ -745,12 +745,16 @@
     return null;
   }
 
+  // Magyar ábécérend (cs a c után, á = a stb.), a számokat számként kezelve.
+  function compareNames(a, b) {
+    return a.name.localeCompare(b.name, 'hu', { numeric: true });
+  }
+
+  // Kategórián belül elöl a hiányzók, utánuk a meglévők; mindkét csoport ábécérendben.
   function productsOf(catId) {
     var ps = S.data.products.filter(function (p) { return p.catId === catId; });
-    var missing = ps.filter(function (p) { return !p.have; })
-      .sort(function (a, b) { return b.missingSince - a.missingSince; });
-    var have = ps.filter(function (p) { return p.have; })
-      .sort(function (a, b) { return a.order - b.order; });
+    var missing = ps.filter(function (p) { return !p.have; }).sort(compareNames);
+    var have = ps.filter(function (p) { return p.have; }).sort(compareNames);
     return missing.concat(have);
   }
 

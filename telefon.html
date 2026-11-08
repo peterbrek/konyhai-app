@@ -404,12 +404,17 @@
     return { cats: cats, known: known };
   }
 
+  // Magyar ábécérend (cs a c után, á = a stb.), a számokat számként kezelve.
+  function compareNames(a, b) {
+    return a.name.localeCompare(b.name, 'hu', { numeric: true });
+  }
+
   function productsIn(catId, known, filter) {
     return S.data.products
       .filter(function (p) {
         return filter(p) && (catId === '__egyeb' ? !known[p.catId] : p.catId === catId);
       })
-      .sort(function (a, b) { return a.order - b.order; });
+      .sort(compareNames);
   }
 
   /* ---------------- Megjelenítés ---------------- */
@@ -448,8 +453,12 @@
   function renderList() {
     var missingOnly = function (p) { return !p.have; };
     var meta = categoriesWithOrphans(missingOnly);
+    // Kategórián belül elöl a még megveendők, a kosárba tettek (kipipáltak) a végére kerülnek; mindkettő ábécérendben.
     var secs = meta.cats.map(function (c) {
-      return { cat: c, items: productsIn(c.id, meta.known, missingOnly) };
+      var items = productsIn(c.id, meta.known, missingOnly);
+      var todo = items.filter(function (p) { return !inCart(p.id); });
+      var got = items.filter(function (p) { return inCart(p.id); });
+      return { cat: c, items: todo.concat(got) };
     }).filter(function (s) { return s.items.length; });
 
     var total = 0;
