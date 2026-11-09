@@ -141,7 +141,13 @@
   .del-dot { width: 24px; height: 24px; border-radius: 12px; background: var(--error); display: grid; align-items: center; justify-items: center; }
   .del-dot svg { width: 14px; height: 14px; -webkit-transition: transform 150ms ease; transition: transform 150ms ease; }
   .erow.is-confirm .del-dot svg { -webkit-transform: rotate(90deg); transform: rotate(90deg); }
-  .on-list { padding: 2px 9px; border-radius: 10px; border: 1.5px dashed var(--dash); font-size: 13px; font-weight: 600; color: var(--muted); }
+  .list-btn {
+    height: 36px; padding: 0 12px 0 9px; border: 1.5px solid var(--accent); border-radius: 18px; background: transparent; color: var(--accent);
+    display: grid; grid-auto-flow: column; align-items: center; grid-gap: 4px; font-size: 14px; font-weight: 700; white-space: nowrap;
+  }
+  .list-btn svg { width: 16px; height: 16px; }
+  .list-btn.is-on { border-color: var(--accent-fill); background: var(--accent-fill); color: var(--on-accent); }
+  .list-btn:disabled { opacity: 0.6; }
   .confirm-del { height: 38px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--error); color: #FFFFFF; font-size: 15px; font-weight: 700; }
   .add-row {
     width: 100%; min-height: 52px; padding: 0 12px 0 14px; border: 0; border-top: 1px solid var(--divider); background: transparent;
@@ -192,7 +198,7 @@
       <button type="button" id="modeBtn" class="link-btn" hidden>Szerkesztés</button>
     </div>
     <h1 id="title">Bevásárlólista</h1>
-    <p id="editSub" class="sub" hidden>Törléshez koppints a piros jelre. Új terméket a kategória alján adhatsz hozzá.</p>
+    <p id="editSub" class="sub" hidden>A „Listára” gombbal felteszed a bevásárlólistára, a piros jellel törölsz. Új terméket a kategória alján adhatsz hozzá.</p>
     <div id="progress">
       <p id="progressText" class="progress-text"></p>
       <div class="bar" style="margin-top:10px"><div id="bar"></div></div>
@@ -318,6 +324,8 @@
   var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17.5 19 7"></polyline></svg>';
   var MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"></path></svg>';
   var PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" aria-hidden="true"><path d="M12 6v12"></path><path d="M6 12h12"></path></svg>';
+  var PLUS_C = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 6v12"></path><path d="M6 12h12"></path></svg>';
+  var CHECK_C = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17.5 19 7"></polyline></svg>';
 
   var S = {
     data: null,
@@ -327,6 +335,8 @@
     errorMsg: '',
     mode: 'list',         // 'list' | 'edit'
     confirmDel: null,     // törlésre kijelölt termék ID
+    listBusy: {},         // termékek, amelyeknek a listára tétele épp mentődik
+    writes: 0,            // módosító hívások száma: a közben elindult frissítés régi adatot hozhat
     addCat: null,         // kategória, ahol épp új terméket veszünk fel
     newName: '',
     addToList: true,
@@ -370,10 +380,19 @@
 
   /* ---------------- Adatok ---------------- */
 
+  /** Módosító hívás: ugyanaz, mint a server(), de jelzi, hogy a közben futó frissítés eredménye már régi. */
+  function write() {
+    S.writes++;
+    return server();
+  }
+
   function load() {
     if (S.saving || S.mode === 'edit') return;
+    var writesAtStart = S.writes;
     server()
       .withSuccessHandler(function (d) {
+        // Ha közben módosítottunk valamit, ez az adat már régi: a következő frissítés hozza a jót.
+        if (S.data && S.writes !== writesAtStart) return;
         S.data = d;
         S.error = false;
         pruneCart();
@@ -516,7 +535,7 @@
         return '<div class="erow">' +
           '<button type="button" class="del-btn" data-ask="' + esc(p.id) + '" aria-label="Törlés: ' + esc(p.name) + '"><span class="del-dot">' + MINUS + '</span></button>' +
           '<span class="name">' + esc(p.name) + '</span>' +
-          (p.have ? '<span></span>' : '<span class="on-list">listán</span>') + '</div>';
+          listButton(p) + '</div>';
       }).join('');
 
       var first = items.length ? '' : ' is-first';
@@ -542,6 +561,46 @@
   }
 
   var noteTimer = null;
+  // Szerkesztő módban: felteszi a terméket a bevásárlólistára, vagy leveszi róla.
+  function listButton(p) {
+    var busy = S.listBusy[p.id] ? ' disabled' : '';
+    if (p.have) {
+      return '<button type="button" class="list-btn" data-list="' + esc(p.id) + '" aria-pressed="false" aria-label="Listára: ' + esc(p.name) + '"' + busy + '>' +
+        PLUS_C + '<span>Listára</span></button>';
+    }
+    return '<button type="button" class="list-btn is-on" data-list="' + esc(p.id) + '" aria-pressed="true" aria-label="Levétel a listáról: ' + esc(p.name) + '"' + busy + '>' +
+      CHECK_C + '<span>Listán</span></button>';
+  }
+
+  function toggleOnList(id) {
+    var idx = findIndex(id);
+    if (idx === -1 || S.listBusy[id]) return;
+    var p = S.data.products[idx];
+    var before = { have: p.have, missingSince: p.missingSince };
+    var cartBefore = S.cart.slice();
+    var toList = p.have;
+    p.have = !toList;
+    p.missingSince = toList ? Date.now() : null;
+    if (!toList) { S.cart = S.cart.filter(function (x) { return x !== id; }); saveCart(); }
+    S.listBusy[id] = true;
+    render();
+    write()
+      .withSuccessHandler(function () {
+        delete S.listBusy[id];
+        render();
+      })
+      .withFailureHandler(function (err) {
+        delete S.listBusy[id];
+        p.have = before.have;
+        p.missingSince = before.missingSince;
+        S.cart = cartBefore;
+        saveCart();
+        render();
+        note('Nem sikerült menteni', (err && err.message) || 'Ellenőrizd a netkapcsolatot, és próbáld újra.', true);
+      })
+      .setHave(KEY, id, !toList);
+  }
+
   function note(title, body, isError) {
     $('noteTitle').textContent = title;
     $('noteBody').textContent = body;
@@ -568,7 +627,7 @@
     var ids = S.cart.slice();
     S.saving = true;
     render();
-    server()
+    write()
       .withSuccessHandler(function () {
         S.saving = false;
         S.error = false;
@@ -623,7 +682,7 @@
     saveCart();
     S.confirmDel = null;
     render();
-    server()
+    write()
       .withSuccessHandler(function () {})
       .withFailureHandler(function (err) {
         S.data.products.splice(idx, 0, removed);
@@ -672,7 +731,7 @@
     S.adding = true;
     S.addError = '';
     render();
-    server()
+    write()
       .withSuccessHandler(function (product) {
         S.adding = false;
         S.data.products.push(product);
@@ -698,6 +757,7 @@
       if (el) toggle(el.getAttribute('data-id'));
       return;
     }
+    if ((el = closest(t, '[data-list]'))) { toggleOnList(el.getAttribute('data-list')); return; }
     if ((el = closest(t, '[data-del]'))) { removeProduct(el.getAttribute('data-del')); return; }
     if ((el = closest(t, '[data-ask]'))) {
       var id = el.getAttribute('data-ask');
