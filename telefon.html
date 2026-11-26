@@ -38,6 +38,12 @@
     --error: #B42318;
     --error-text: #B42318;
     --error-soft: #FDF1EF;
+    --warn-bg: #FBEEDD;
+    --warn-fg: #7A3A0A;
+    --ok-bg: #E7EFEA;
+    --ok-fg: #1E5A46;
+    --seg-bg: #E9E6E0;
+    --seg-on: #FFFFFF;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -61,6 +67,12 @@
       --error: #C8372A;
       --error-text: #F28B80;
       --error-soft: #3A1E1B;
+      --warn-bg: #3A2A1C;
+      --warn-fg: #F2C9A0;
+      --ok-bg: #1D3329;
+      --ok-fg: #8FD9B6;
+      --seg-bg: #2A2825;
+      --seg-on: #3A3733;
     }
   }
   * { box-sizing: border-box; }
@@ -188,6 +200,58 @@
     display: grid; align-items: center; justify-items: center; font-size: 15px; font-variant-numeric: tabular-nums;
   }
   .loading { margin: 0; font-size: 17px; color: var(--muted); }
+
+  /* Lista / Receptek váltó */
+  .tabs { margin-top: 6px; padding: 3px; border-radius: 12px; background: var(--seg-bg); display: grid; grid-template-columns: 1fr 1fr; grid-gap: 3px; }
+  .tabs button { height: 38px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: 16px; font-weight: 600; }
+  .tabs button[aria-selected="true"] { background: var(--seg-on); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
+
+  /* Receptlista */
+  .rrow {
+    width: 100%; min-height: 60px; padding: 10px 12px 10px 16px; border: 0; border-top: 1px solid var(--divider); background: transparent;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto 14px; align-items: center; grid-gap: 10px;
+    text-align: left; color: var(--ink);
+  }
+  .rrow:first-child { border-top: 0; }
+  .rname { display: block; font-size: 18px; font-weight: 600; line-height: 1.3; }
+  .rinfo { display: block; margin-top: 2px; font-size: 14px; line-height: 1.35; color: var(--muted); }
+  .chip {
+    height: 28px; padding: 0 10px; border-radius: 14px; display: grid; grid-auto-flow: column; align-items: center; grid-gap: 4px;
+    font-size: 13px; font-weight: 700; white-space: nowrap;
+  }
+  .chip svg { width: 14px; height: 14px; }
+  .chip.ok { background: var(--accent-fill); color: var(--on-accent); }
+  .chip.miss { border: 1.5px solid var(--pending); color: var(--pending); }
+  .chev { color: var(--dash); }
+  .chev svg { width: 14px; height: 14px; }
+
+  /* Recept részletei */
+  .detail { display: grid; grid-gap: 16px; }
+  .back { justify-self: start; height: 44px; padding: 0 12px 0 0; border: 0; background: transparent; color: var(--accent);
+    display: grid; grid-auto-flow: column; align-items: center; grid-gap: 4px; font-size: 17px; font-weight: 600; }
+  .back svg { width: 18px; height: 18px; }
+  .rtitle { margin: -4px 0 0; font-size: 26px; line-height: 1.2; font-weight: 800; letter-spacing: -0.01em; }
+  .rnotice { margin: 0; padding: 12px 14px; border-radius: 14px; font-size: 15px; line-height: 1.4; }
+  .rnotice.ok { background: var(--ok-bg); color: var(--ok-fg); font-weight: 600; }
+  .rnotice.miss { background: var(--warn-bg); color: var(--warn-fg); }
+  .hint { margin: -6px 4px 0; font-size: 14px; line-height: 1.4; color: var(--muted); }
+  .irow {
+    width: 100%; min-height: 56px; padding: 8px 12px 8px 14px; border: 0; border-top: 1px solid var(--divider); background: transparent;
+    display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; align-items: center; grid-gap: 12px;
+    text-align: left; color: var(--ink);
+  }
+  .irow:first-child { border-top: 0; }
+  .iname { display: block; font-size: 17px; line-height: 1.3; }
+  .iqty { display: block; margin-top: 1px; font-size: 14px; line-height: 1.3; color: var(--muted); }
+  .irow.is-cart .iname { color: var(--muted-2); }
+  .itag { font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .itag.miss { color: var(--pending); }
+  .itag.cart { color: var(--accent); }
+  .itag.unk { color: var(--muted); font-weight: 600; }
+  .have-dot { width: 26px; height: 26px; border-radius: 13px; background: var(--line); color: var(--muted); display: grid; align-items: center; justify-items: center; }
+  .have-dot svg { width: 15px; height: 15px; }
+  .udot { width: 8px; height: 8px; border-radius: 4px; background: var(--dash); justify-self: center; }
+  .steps { margin: 0; padding: 14px 16px 14px 40px; display: grid; grid-gap: 10px; font-size: 16px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -198,6 +262,11 @@
       <button type="button" id="modeBtn" class="link-btn" hidden>Szerkesztés</button>
     </div>
     <h1 id="title">Bevásárlólista</h1>
+    <div id="tabs" class="tabs" role="tablist" hidden>
+      <button type="button" role="tab" id="tabList" data-tab="list" aria-selected="true">Lista</button>
+      <button type="button" role="tab" id="tabRecipes" data-tab="recipes" aria-selected="false">Receptek</button>
+    </div>
+    <p id="recipesSub" class="sub" hidden>Mit tudsz megfőzni? A kosárba tett tételek már megvettnek számítanak.</p>
     <p id="editSub" class="sub" hidden>A „Listára” gombbal felteszed a bevásárlólistára, a piros jellel törölsz. Új terméket a kategória alján adhatsz hozzá.</p>
     <div id="progress">
       <p id="progressText" class="progress-text"></p>
@@ -325,6 +394,8 @@
   var MINUS = '<svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"></path></svg>';
   var PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" aria-hidden="true"><path d="M12 6v12"></path><path d="M6 12h12"></path></svg>';
   var PLUS_C = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 6v12"></path><path d="M6 12h12"></path></svg>';
+  var CHEVRON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 5 16 12 9 19"></polyline></svg>';
+  var BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 5 8 12 15 19"></polyline></svg>';
   var CHECK_C = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17.5 19 7"></polyline></svg>';
 
   var S = {
@@ -334,6 +405,9 @@
     error: false,
     errorMsg: '',
     mode: 'list',         // 'list' | 'edit'
+    tab: 'list',          // 'list' (bevásárlólista) | 'recipes' (receptek)
+    recipe: null,         // a megnyitott recept ID-ja a Receptek fülön
+    recipesScroll: 0,     // a receptlista görgetése, hogy visszalépéskor ott folytatódjon
     confirmDel: null,     // törlésre kijelölt termék ID
     listBusy: {},         // termékek, amelyeknek a listára tétele épp mentődik
     writes: 0,            // módosító hívások száma: a közben elindult frissítés régi adatot hozhat
@@ -440,12 +514,18 @@
 
   function render() {
     var editing = S.mode === 'edit';
+    var recipesTab = !editing && S.tab === 'recipes';
+    if (recipesTab && S.recipe && S.data && !findRecipe(S.recipe)) S.recipe = null;
     $('wrap').className = 'wrap' + (editing ? ' is-edit' : '');
     $('bottom').hidden = editing;
-    $('progress').hidden = editing;
+    $('progress').hidden = editing || recipesTab;
     $('editSub').hidden = !editing;
-    $('title').textContent = editing ? 'Termékek' : 'Bevásárlólista';
-    $('modeBtn').hidden = !S.data;
+    $('recipesSub').hidden = !recipesTab || !S.data || !!S.recipe;
+    $('tabs').hidden = editing || !S.data;
+    $('tabList').setAttribute('aria-selected', recipesTab ? 'false' : 'true');
+    $('tabRecipes').setAttribute('aria-selected', recipesTab ? 'true' : 'false');
+    $('title').textContent = editing ? 'Termékek' : (recipesTab ? 'Receptek' : 'Bevásárlólista');
+    $('modeBtn').hidden = !S.data || recipesTab;
     $('modeBtn').textContent = editing ? 'Kész' : 'Szerkesztés';
     $('modeBtn').className = 'link-btn' + (editing ? ' is-strong' : '');
 
@@ -454,7 +534,9 @@
       $('list').innerHTML = '<p class="loading">' + (S.error ? 'Nem sikerült betölteni a listát.' : 'Betöltés…') + '</p>';
       return;
     }
-    if (editing) renderEdit(); else renderList();
+    if (editing) renderEdit();
+    else if (recipesTab) renderRecipes();
+    else renderList();
   }
 
   function setSync(text, color) {
@@ -486,10 +568,7 @@
       s.items.forEach(function (p) { total++; if (inCart(p.id)) done++; });
     });
 
-    var pending = S.cart.length;
-    if (S.error) setSync('Nincs kapcsolat – a pipák megmaradnak', 'var(--error)');
-    else if (pending > 0) setSync('Az iPad a „Bevásárlás kész” után frissül', 'var(--pending)');
-    else setSync('Szinkronban a konyhai iPaddel', 'var(--accent)');
+    updateSync();
 
     $('progressText').textContent = total === 0 ? 'Nincs mit venni'
       : (done === total ? 'Minden megvan' : done + ' / ' + total + ' megvan');
@@ -511,11 +590,179 @@
       }).join('') + '</div>';
     }
 
+    updateFinish();
+  }
+
+  function updateSync() {
+    if (S.error) setSync('Nincs kapcsolat – a pipák megmaradnak', 'var(--error)');
+    else if (S.cart.length > 0) setSync('Az iPad a „Bevásárlás kész” után frissül', 'var(--pending)');
+    else setSync('Szinkronban a konyhai iPaddel', 'var(--accent)');
+  }
+
+  function updateFinish() {
+    var pending = S.cart.length;
     var btn = $('finish');
     btn.disabled = pending === 0 || S.saving;
     if (S.saving) btn.innerHTML = 'Szinkronizálás…';
     else if (pending > 0) btn.innerHTML = '<span>Bevásárlás kész</span><span class="count">' + pending + '</span>';
     else btn.innerHTML = 'Bevásárlás kész';
+  }
+
+  /* ---------------- Receptek ----------------
+   * Ugyanaz a jelölés, mint az iPaden, csak a kosárba tett (kipipált) tételek is megvettnek számítanak,
+   * hogy bevásárlás közben látszódjon, mi főzhető meg.
+   */
+
+  function findRecipe(id) {
+    var list = (S.data && S.data.recipes) || [];
+    for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+    return null;
+  }
+
+  function productIndex() {
+    var idx = {};
+    S.data.products.forEach(function (p) {
+      var k = String(p.name).trim().toLowerCase();
+      if (!idx[k]) idx[k] = p;
+    });
+    return idx;
+  }
+
+  // Hozzávalónként: have (itthon van), cart (kosárban), missing (a listán, még nincs a kosárban), unknown (nem kamra-termék).
+  function recipeInfo(r, idx) {
+    var rows = (r.ingredients || []).map(function (ing) {
+      var p = idx[String(ing.name || '').trim().toLowerCase()] || null;
+      var state = !p ? 'unknown' : (p.have ? 'have' : (inCart(p.id) ? 'cart' : 'missing'));
+      return { ing: ing, product: p, state: state };
+    });
+    var missing = [];
+    var fromCart = [];
+    var seen = {};
+    rows.forEach(function (x) {
+      if (!x.product || seen[x.product.id]) return;
+      seen[x.product.id] = true;
+      if (x.state === 'missing') missing.push(x.product.name);
+      if (x.state === 'cart') fromCart.push(x.product.name);
+    });
+    return { rows: rows, missing: missing, fromCart: fromCart, linked: rows.some(function (x) { return x.product; }) };
+  }
+
+  function qtyText(ing) {
+    var q = ing.qty;
+    var s = (q === null || q === undefined || q === '') ? '' : String(q).replace('.', ',');
+    return (s ? s + ' ' : '') + (ing.unit || '');
+  }
+
+  function renderRecipes() {
+    updateSync();
+    updateFinish();
+    var r = S.recipe ? findRecipe(S.recipe) : null;
+    if (r) { renderRecipeDetail(r); return; }
+
+    var idx = productIndex();
+    var recipes = (S.data.recipes || []).map(function (rec) { return { r: rec, info: recipeInfo(rec, idx) }; });
+    if (!recipes.length) {
+      $('list').innerHTML = '<div class="card empty"><p class="big">Még nincs recept</p>' +
+        '<p class="small">A konyhai iPaden a Receptek fülön vehetsz fel újat.</p></div>';
+      return;
+    }
+    var byName = function (a, b) { return a.r.name.localeCompare(b.r.name, 'hu', { numeric: true }); };
+    var ready = recipes.filter(function (x) { return x.info.linked && !x.info.missing.length; }).sort(byName);
+    var notYet = recipes.filter(function (x) { return x.info.missing.length; })
+      .sort(function (a, b) { return (a.info.missing.length - b.info.missing.length) || byName(a, b); });
+    var other = recipes.filter(function (x) { return !x.info.linked; }).sort(byName);
+
+    function row(x) {
+      var info = x.info;
+      var chip = '';
+      var sub = '';
+      if (info.missing.length) {
+        chip = '<span class="chip miss">' + info.missing.length + ' hiányzik</span>';
+        sub = 'Hiányzik: ' + info.missing.join(', ');
+      } else if (info.linked) {
+        chip = '<span class="chip ok">' + CHECK_C + '<span>Megvan</span></span>';
+        if (info.fromCart.length) sub = 'A kosárból: ' + info.fromCart.join(', ');
+      } else {
+        sub = 'Nincs kamra-hozzávalója';
+      }
+      return '<button type="button" class="rrow" data-recipe="' + esc(x.r.id) + '">' +
+        '<span><span class="rname">' + esc(x.r.name) + '</span>' + (sub ? '<span class="rinfo">' + esc(sub) + '</span>' : '') + '</span>' +
+        chip + '<span class="chev" aria-hidden="true">' + CHEVRON + '</span></button>';
+    }
+    function section(title, list) {
+      if (!list.length) return '';
+      return '<section><div class="sec-head"><h2>' + esc(title) + '</h2><span>' + list.length + '</span></div>' +
+        '<div class="card">' + list.map(row).join('') + '</div></section>';
+    }
+    $('list').innerHTML = '<div class="sections">' +
+      section('Megfőzhető', ready) + section('Hiányzik hozzá valami', notYet) + section('Kamra-hozzávaló nélkül', other) +
+      '</div>';
+  }
+
+  function renderRecipeDetail(r) {
+    var info = recipeInfo(r, productIndex());
+    var notice = '';
+    if (info.missing.length) {
+      notice = '<p class="rnotice miss"><strong>Hiányzik: ' + esc(info.missing.join(', ')) + '.</strong> ' +
+        (info.missing.length > 1 ? 'Rajta vannak a bevásárlólistán.' : 'Rajta van a bevásárlólistán.') + '</p>';
+    } else if (info.linked) {
+      notice = '<p class="rnotice ok">' + (info.fromCart.length
+        ? 'Minden hozzávaló megvan, a kosárban lévőkkel együtt.'
+        : 'Minden hozzávaló megvan itthon.') + '</p>';
+    }
+    var anyOnList = info.rows.some(function (x) { return x.state === 'missing' || x.state === 'cart'; });
+
+    var rows = info.rows.map(function (x) {
+      var qty = qtyText(x.ing);
+      var sub = [qty, x.ing.note || ''].filter(function (s) { return s; }).join(' · ');
+      var label = '<span><span class="iname">' + esc(x.ing.name) + '</span>' + (sub ? '<span class="iqty">' + esc(sub) + '</span>' : '') + '</span>';
+      if (x.state === 'missing' || x.state === 'cart') {
+        var on = x.state === 'cart';
+        return '<button type="button" class="irow' + (on ? ' is-cart' : '') + '" data-id="' + esc(x.product.id) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' +
+          (on ? '<span class="tick" aria-hidden="true">' + CHECK + '</span>' : '<span class="ring" aria-hidden="true"></span>') +
+          label + '<span class="itag ' + (on ? 'cart' : 'miss') + '">' + (on ? 'kosárban' : 'listán') + '</span></button>';
+      }
+      if (x.state === 'have') {
+        return '<div class="irow"><span class="have-dot" aria-hidden="true">' + CHECK_C + '</span>' + label + listButton(x.product) + '</div>';
+      }
+      return '<div class="irow"><span class="udot" aria-hidden="true"></span>' + label + '<span class="itag unk">nincs a kamrában</span></div>';
+    }).join('');
+
+    var steps = (r.steps || []).length
+      ? '<section><div class="sec-head"><h2>Elkészítés</h2></div><div class="card"><ol class="steps">' +
+        r.steps.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol></div></section>'
+      : '';
+
+    $('list').innerHTML = '<div class="detail">' +
+      '<button type="button" class="back" data-back="1">' + BACK + '<span>Receptek</span></button>' +
+      '<h2 class="rtitle">' + esc(r.name) + '</h2>' + notice +
+      (anyOnList ? '<p class="hint">A listán lévő hozzávalót koppintással teheted a kosárba, ahogy a Lista fülön is.</p>' : '') +
+      (info.rows.length
+        ? '<section><div class="sec-head"><h2>Hozzávalók</h2></div><div class="card">' + rows + '</div></section>'
+        : '<div class="card empty"><p class="small">Ehhez a recepthez még nincs hozzávaló.</p></div>') +
+      steps + '</div>';
+  }
+
+  function openRecipe(id) {
+    S.recipesScroll = window.pageYOffset || 0;
+    S.recipe = id;
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function closeRecipe() {
+    S.recipe = null;
+    render();
+    window.scrollTo(0, S.recipesScroll || 0);
+  }
+
+  function setTab(tab) {
+    if (S.mode === 'edit') exitEdit();
+    if (S.tab === tab && !S.recipe) return;
+    S.tab = tab;
+    S.recipe = null;
+    render();
+    window.scrollTo(0, 0);
   }
 
   function renderEdit() {
@@ -753,6 +1000,9 @@
     var t = e.target;
     var el;
     if (S.mode === 'list') {
+      if ((el = closest(t, '[data-list]'))) { toggleOnList(el.getAttribute('data-list')); return; }
+      if ((el = closest(t, '[data-recipe]'))) { openRecipe(el.getAttribute('data-recipe')); return; }
+      if (closest(t, '[data-back]')) { closeRecipe(); return; }
       el = closest(t, '[data-id]');
       if (el) toggle(el.getAttribute('data-id'));
       return;
@@ -782,6 +1032,10 @@
     if (S.mode === 'edit') exitEdit(); else enterEdit();
   });
   $('finish').addEventListener('click', finish);
+  $('tabs').addEventListener('click', function (e) {
+    var b = closest(e.target, '[data-tab]');
+    if (b) setTab(b.getAttribute('data-tab'));
+  });
   $('noteClose').addEventListener('click', function () {
     clearTimeout(noteTimer);
     $('note').hidden = true;
